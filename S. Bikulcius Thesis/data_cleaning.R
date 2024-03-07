@@ -37,14 +37,8 @@ cog_data <- rio::import("2024-02-26 16.32.44 Assessment Scores.csv") |>
                      values_from = score) |>
   dplyr::rename(subject = pin)
 
-# Merge cognitive data with pupil data
-
-pupil <- rio::import("cleaned_data.csv")
-
-data <- dplyr::left_join(pupil, cog_data, by = "subject")
-
 # Exporting cleaned data for analysis
 
 setwd("~/Documents/LE-Cognitive-Study/Data")
 
-rio::export(data, "cleaned_data.csv")
+rio::export(cog_data, "cleaned_cog_data.csv")
