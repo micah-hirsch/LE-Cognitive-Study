@@ -1,0 +1,37 @@
+---
+title: 'S. Bikulcius Thesis: Analysis'
+author: "Micah E. Hirsch"
+date: "2024-03-07"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Purpose
+
+The purpose of this document is to report the results from the data analysis for S. Bikulcius' undergraduate thesis project. Analyses were conducted using R version 4.3.1.
+
+```{r}
+
+library(tidyverse)
+library(rio)
+library(glmmTMB)
+library(janitor)
+library(ggpubr)
+library(patchwork)
+
+```
+
+# Participant Demographics
+
+
+
+```{r pressure, echo=FALSE}
+
+plot(pressure)
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
