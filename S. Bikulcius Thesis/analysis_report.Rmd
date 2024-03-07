@@ -15,12 +15,16 @@ The purpose of this document is to report the results from the data analysis for
 
 ```{r}
 
+# Loading needed packages
+
 library(tidyverse)
 library(rio)
 library(glmmTMB)
 library(janitor)
 library(ggpubr)
 library(patchwork)
+
+# Loading saved data
 
 ```
 
