@@ -15,7 +15,7 @@ library(janitor)
 
 # Setting Working Directory
 
-setwd("~/Documents/LE-Cognitive-Study/Data/Raw")
+setwd("~/Documents/LE-Cognitive-Study/Raw Data")
 
 # Loading in cognitive data
 
@@ -39,6 +39,6 @@ cog_data <- rio::import("2024-02-26 16.32.44 Assessment Scores.csv") |>
 
 # Exporting cleaned data for analysis
 
-setwd("~/Documents/LE-Cognitive-Study/Data")
+setwd("~/Documents/LE-Cognitive-Study/S. Bikulcius Thesis/Data")
 
 rio::export(cog_data, "cleaned_cog_data.csv")
