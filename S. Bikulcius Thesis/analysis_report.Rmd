@@ -93,6 +93,8 @@ demo_table |>
 
 ## Cognition
 
+It appears that the listeners in this analysis had about average working memory and cognitive flexibility skills. Their inhibitory control scores were slightly below average and they tend to have higher processing speed scores (on the heigher end in the average range). The score distributions for working memory, cognitive flexibility, and inhibitory control roughly follow a normal distribution. The scores for processing speed appears to have more variation overall, and potentially has a bimodal distribution.
+
 ### Descriptives
 
 ```{r}
@@ -131,6 +133,21 @@ cog |>
                       position = position_points_jitter(width = 0.05, height = 0),
                       point_shape = '|', point_size = 3, point_alpha = 1, alpha = 0.5) +
   theme_classic()
+
+```
+
+```{r}
+
+rm(demo, demo_table)
+
+```
+
+
+# Speaker Characteristics
+
+```{r}
+
+
 
 ```
 
