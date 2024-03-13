@@ -30,10 +30,10 @@ cog_data <- rio::import("2024-02-26 16.32.44 Assessment Scores.csv") |>
   tidyr::pivot_longer(cols = uncorrected_standard_score:age_corrected_standard_score,
                       names_to = "type",
                       values_to = "score") |>
-  dplyr::mutate(measure = ifelse(grepl("uncorrected", type, ignore.case = T), 
+  dplyr::mutate(measure1 = ifelse(grepl("uncorrected", type, ignore.case = T), 
                                   paste(measure, "u", sep = "_"), paste(measure, "c", sep = "_"))) |>
-  dplyr::select(-type) |>
-  tidyr::pivot_wider(names_from = measure,
+  dplyr::select(-c(type, measure)) |>
+  tidyr::pivot_wider(names_from = measure1,
                      values_from = score) |>
   dplyr::rename(subject = pin)
 

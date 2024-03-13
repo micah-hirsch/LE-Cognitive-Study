@@ -5,3 +5,10 @@
 .DS_Store
 Data/Raw
 Raw Data/
+S. Bikulcius Thesis/Tables/
+S. Bikulcius Thesis/Figures/
+*.html
+*.png
+S. Bikulcius Thesis/Tables/cog_table.html
+S. Bikulcius Thesis/Tables/demo_table.html
+S. Bikulcius Thesis/Tables/speaker_table.html

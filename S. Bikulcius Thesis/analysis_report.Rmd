@@ -26,6 +26,12 @@ library(patchwork)
 library(gt)
 library(gtsummary)
 library(ggridges)
+library(performance)
+library(sjPlot)
+library(ggcorrplot)
+library(lme4)
+library(lmerTest)
+library(optimx)
 
 # Loading saved data
 
@@ -38,7 +44,7 @@ pupil <- rio::import("Data/cleaned_data.csv") |>
   dplyr::filter(timebins <= max(timebins) - 2000) |>
   dplyr::ungroup() |>
   # Getting Peak Pupil Dilation Value
-  dplyr::group_by(subject, trial, speaker, code, rep_acc, target_number, correct_words) |>
+  dplyr::group_by(subject, trial, speaker, code, rep_acc, target_number, correct_words, effort_rating) |>
   dplyr::summarize(peak_pupil = max(pupil.binned)) |>
   dplyr::ungroup()
 
@@ -54,9 +60,9 @@ demo <- rio::import("Data/cleaned_listener_demo.csv") |>
                 race = factor(race, levels = c("white/Caucasian", "Black/African American", "Asian/Asian American",
                                                "Native Hawaiian or Other Pacific Islander", "Native American or Alaska Native",
                                                "Biracial or Multiracial", "Prefer not to answer", "Race not listed")),
-                native_lang = factor(native_lang, c("American English", "Not American English")))
+                native_lang = factor(native_lang, c("American English", "Not American English"))) |>
+  dplyr::rename(subject = id)
 ```
-
 
 # Listener Characteristics
 
@@ -90,10 +96,9 @@ demo_table |>
 
 ```
 
-
 ## Cognition
 
-It appears that the listeners in this analysis had about average working memory and cognitive flexibility skills. Their inhibitory control scores were slightly below average and they tend to have higher processing speed scores (on the heigher end in the average range). The score distributions for working memory, cognitive flexibility, and inhibitory control roughly follow a normal distribution. The scores for processing speed appears to have more variation overall, and potentially has a bimodal distribution.
+It appears that the listeners in this analysis had about average working memory and cognitive flexibility skills. Their inhibitory control scores were slightly below average and they tend to have higher processing speed scores (on the higher end in the average range). The score distributions for working memory, cognitive flexibility, and inhibitory control roughly follow a normal distribution. The scores for processing speed appears to have more variation overall, and potentially has a bimodal distribution.
 
 ### Descriptives
 
@@ -145,8 +150,38 @@ rm(demo, demo_table)
 
 ```
 
+### Correlations Among Cognitive Measures
+
+For our analysis, it is important to consider the correlations between working memory, inhibitory control, cognitive flexibility, and processing speed. The figure below shows a correlation matrix. The pearson correlation coefficients are in each block and the color of the block relates to how strong the correlations are. Values closer to 1 or -1 suggest a stronger positive or negative correlation between the two cognitive measures, respectively.
+
+The correlation matrix below shows a moderate positive correlation between cognitive flexibility and processing speed. There are also weak-to-moderate correlations between inhibitory control and cognitive flexibility and processing speed and working memory. This means the following:
+
+-   Listeners with higher processing speed scores also tend to have higher processing speed scores
+-   Listeners with higher inhibitory control scores also tend to have higher cognitive flexibility scores
+-   Listeners with higher processing speed scores also tend to have higher working memory scores
+
+```{r}
+
+cog |>
+  dplyr::select(ends_with("_c")) |>
+  dplyr::rename('Working Memory' = list_sort_c,
+                'Inhibitory Control' = flanker_c,
+                'Cognitive Flexibility' = card_sort_c,
+                'Processing Speed' = pattern_c) |>
+  cor(use = "pairwise.complete.obs") |>
+  ggcorrplot(
+    type = "lower",
+    outline.col = "white",
+    lab = TRUE,
+    insig = "blank",
+    legend.title = "Correlation"
+  )
+
+```
 
 # Speaker Characteristics
+
+In this study, we use speech samples from two speakers: a control speaker with neurotypical speech and a speaker with dysarthria secondary to Amyotropic Lateral Sclerosis (ALS). The mean speaker intelligibility is reported below. This was calculated using the listener responses. Although the speaker with ALS has a mean intelligibility of approximately 82%, about listeners still repeated approximately half of their trials incorrectly. When listening to the control speaker, there was a higher proportion of accurate responses.
 
 ```{r}
 
@@ -156,7 +191,9 @@ pupil <- pupil |>
   dplyr::filter(!is.na(rep_acc)) |>
   dplyr::mutate(speaker = factor(speaker, levels = c("Control", "ALS")),
                 trial_c = trial - 6,
-                rep_acc = factor(rep_acc, levels = c("accurate", "inaccurate")))
+                rep_acc = factor(rep_acc, levels = c("accurate", "inaccurate"))) |>
+  # recoding missing effort ratings (negative effort ratings indicate missing data)
+  dplyr::mutate(effort_rating = ifelse(effort_rating < 0, NA, effort_rating))
 
 speaker_table <- pupil |>
   dplyr::select(subject, trial, speaker, correct_words, target_number, rep_acc) |>
@@ -183,6 +220,352 @@ speaker_table |>
 ```{r}
 
 rm(speaker_table, cog_table)
+
+```
+
+# Listening Effort
+
+## Descriptives
+
+### Listening Effort For Intelligible Phrases
+
+Mean peak pupil dilation values (arbitrary units) and mean effort ratings for accurately-recognized phrases for each speaker is reported in the table below.
+
+```{r}
+
+effort_table <- pupil |>
+  dplyr::filter(rep_acc == "accurate") |>
+  dplyr::select(speaker, peak_pupil, effort_rating) |>
+  tbl_summary(
+        by = speaker,
+        type = list(peak_pupil ~ "continuous",
+                    effort_rating ~ "continuous"),
+        statistic = list(all_continuous() ~ c("{mean} ({sd})")),
+        missing = "no",
+        digits = all_continuous() ~ 2,
+        label = list(peak_pupil ~ "Peak Pupil Dilation",
+                     effort_rating ~"Perceived Listening Effort")
+      ) |>
+  as_gt()
+
+effort_table
+
+effort_table |>
+  gt::gtsave("Tables/effort_table.html")
+
+```
+
+### Listening Effort: Comparing Intelligible and Non-Intelligible Phrases
+
+Mean peak pupil dilation values (arbitrary units) and mean effort ratings for when listener's accurately and inaccurately recognized the phrase for each speaker is reported below.
+
+```{r}
+
+effort_table2 <- pupil |>
+  dplyr::select(speaker, peak_pupil, effort_rating, rep_acc) |>
+  tbl_strata(
+    strata = rep_acc,
+    ~.x |>
+      tbl_summary(
+        by = speaker,
+        type = list(peak_pupil ~ "continuous",
+                    effort_rating ~ "continuous"),
+        statistic = list(all_continuous() ~ c("{mean} ({sd})")),
+        missing = "no",
+        digits = all_continuous() ~ 2,
+        label = list(peak_pupil ~ "Peak Pupil Dilation",
+                     effort_rating ~"Perceived Listening Effort")
+      )) |>
+  as_gt()
+
+effort_table2
+
+effort_table2 |>
+  gt::gtsave("Tables/effort_table_accuracy.html")
+
+```
+
+
+```{r}
+
+rm(effort_table, effort_table2)
+
+```
+
+
+## Pupil Dilation
+
+### Visualizations
+
+#### Overall Peak Pupil Dilation
+
+Figure showing peak pupil dilation for accurately recognized phrases for the control and ALS speakers.
+
+```{r}
+
+pupil_des <- pupil |>
+  dplyr::group_by(speaker, rep_acc) |>
+  dplyr::summarize(pupil = mean(peak_pupil, na.rm = T), 
+                   sd = sd(peak_pupil, na.rm = T),
+                   se = sd/sqrt(n())) |>
+  ungroup()
+
+pupil_des |>
+  dplyr::filter(rep_acc == "accurate") |>
+  ggplot() +
+   aes(x = speaker,
+       y = pupil,
+       group = speaker,
+       color = speaker,
+       fill = speaker) +
+  geom_bar(stat = "identity", alpha = 0.5) +
+  geom_errorbar(aes(ymin = pupil - se, ymax = pupil + se), width = 0.4) +
+  labs(x = "Speaker", y = "Peak Pupil Dilation (Arbitrary Units)") +
+  theme_bw() +
+  theme(aspect.ratio = 1)
+
+```
+
+Figure showing peak pupil dilation for accurately and inaccurately recognized phrases for the control and ALS speakers.
+
+```{r}
+
+pupil_des |>
+  ggplot() +
+   aes(x = rep_acc,
+       y = pupil,
+       group = speaker,
+       color = speaker,
+       fill = speaker) +
+  geom_bar(stat = "identity", alpha = 0.5, position = position_dodge()) +
+  geom_errorbar(aes(ymin = pupil - se, ymax = pupil + se), width = 0.4, position = position_dodge(.9)) +
+  labs(x = "Accuracy", y = "Peak Pupil Dilation (Arbitrary Units)") +
+  theme_bw() +
+  theme(aspect.ratio = 1)
+
+```
+
+#### Pupil Dilation Predicted by Listener Cognition
+
+Average Peak Pupil Dilation vs Cognitive Scores
+
+```{r}
+
+pupil1 <- dplyr::left_join(pupil, cog, by = "subject") 
+
+pupil1 |>
+  dplyr::filter(rep_acc == "accurate") |>
+  dplyr::select(subject, trial, speaker, code, peak_pupil, ends_with("_c")) |>
+  dplyr::group_by(subject, speaker, list_sort_c, flanker_c, card_sort_c, pattern_c) |>
+  dplyr::summarize(pupil = mean(peak_pupil)) |>
+  tidyr::pivot_longer(cols = list_sort_c:pattern_c,
+                     names_to = "cog_measure",
+                     values_to = "score") |>
+  ungroup() |>
+  ggplot() +
+  aes(x = score,
+      y = pupil,
+      color = speaker,
+      ) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(method = "lm") +
+  facet_wrap("cog_measure") +
+  theme_classic() +
+  theme(aspect.ratio = 1)
+
+```
+
+```{r}
+
+pupil1 |>
+  dplyr::select(subject, trial, speaker, code, rep_acc, peak_pupil, ends_with("_c")) |>
+  dplyr::group_by(subject, speaker, rep_acc, list_sort_c, flanker_c, card_sort_c, pattern_c) |>
+  dplyr::summarize(pupil = mean(peak_pupil)) |>
+  tidyr::pivot_longer(cols = list_sort_c:pattern_c,
+                     names_to = "cog_measure",
+                     values_to = "score") |>
+  ungroup() |>
+  ggplot() +
+  aes(x = score,
+      y = pupil,
+      color = rep_acc,
+      ) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(method = "lm") +
+  facet_grid(cog_measure ~ speaker) +
+  theme_classic() +
+  theme(aspect.ratio = 1)
+
+ggsave("Figures/peak_pupil_cog_plot.png", plot = last_plot())
+
+```
+
+### Analysis
+
+Given our sample size and the primary question for this thesis project, we are just going to analyze the accurately recognized phrases for each speaker (i.e. 100% intelligible phrases). To analyze the relationships between listener cognition and listening effort, we are using linear mixed effects models. 
+
+#### Unconditional Model
+
+```{r}
+
+accurate_df <- pupil1 |>
+  dplyr::filter(rep_acc == "accurate")
+
+m0 <- glmmTMB(peak_pupil ~ 1 + (1|subject) + (1|code), data = accurate_df)
+summary(m0)
+performance::icc(m0)
+
+
+```
+
+#### Model 1
+
+```{r}
+
+m1 <- glmmTMB(peak_pupil ~ trial_c + (1|subject) + (1|code), data = accurate_df)
+summary(m1)
+performance::compare_performance(m0, m1)
+performance::test_performance(m0, m1)
+
+```
+
+#### Model 2
+
+```{r}
+
+m2 <- glmmTMB(peak_pupil ~ trial_c + speaker + (1|subject) + (1|code), data = accurate_df)
+summary(m2)
+performance::compare_performance(m1, m2)
+performance::test_performance(m1, m2)
+
+```
+
+#### Model 2b
+
+```{r}
+
+m2b <- glmmTMB(peak_pupil ~ trial_c + speaker + (1|subject), data = accurate_df)
+summary(m2b)
+performance::compare_performance(m2, m2b)
+performance::test_performance(m2, m2b)
+
+```
+
+
+#### Model 3
+
+```{r}
+
+m3 <- glmmTMB(peak_pupil ~ trial_c + speaker + list_sort_c + (1|subject) + (1|code), data = accurate_df)
+summary(m3)
+performance::compare_performance(m2, m3)
+performance::test_performance(m2, m3)
+
+```
+
+#### Model 3b
+
+```{r}
+
+m3b <- glmmTMB(peak_pupil ~ trial_c + speaker + list_sort_c + (1|subject), data = accurate_df)
+summary(m3b)
+performance::compare_performance(m3, m3b)
+performance::test_performance(m3, m3b)
+
+```
+
+#### Comparing Model 3b with Model 2
+
+```{r}
+
+performance::compare_performance(m2, m3b)
+performance::test_performance(m2, m3b)
+
+```
+
+
+#### Model 4
+
+```{r}
+
+m4 <- glmmTMB(peak_pupil ~ trial_c + speaker + flanker_c + (1|subject), data = accurate_df)
+summary(m4)
+performance::compare_performance(m2b, m4)
+performance::test_performance(m2b, m4)
+
+```
+
+#### Model 5
+
+```{r}
+
+m5 <- glmmTMB(peak_pupil ~ trial_c + speaker + card_sort_c + (1|subject), data = accurate_df)
+summary(m5)
+performance::compare_performance(m2b, m5)
+performance::test_performance(m2b, m5)
+
+```
+
+#### Model 6
+
+```{r}
+
+m6 <- glmmTMB(peak_pupil ~ trial_c + speaker + pattern_c + (1|subject), data = accurate_df)
+summary(m6)
+performance::compare_performance(m2b, m6)
+performance::test_performance(m2b, m6)
+
+```
+
+#### Model 7
+
+```{r}
+
+m7 <- glmmTMB(peak_pupil ~ trial_c + speaker + list_sort_c*speaker + (1|subject), data = accurate_df)
+summary(m7)
+performance::compare_performance(m2b, m7)
+performance::test_performance(m2b, m7)
+
+```
+
+#### Model 8
+
+```{r}
+
+m8 <- glmmTMB(peak_pupil ~ trial_c + speaker + list_sort_c*speaker + flanker_c*speaker + (1|subject), data = accurate_df)
+summary(m8)
+performance::compare_performance(m7, m8)
+performance::test_performance(m7, m8)
+
+```
+
+#### Model 9
+
+```{r}
+
+m9 <- glmmTMB(peak_pupil ~ trial_c + speaker + list_sort_c*speaker + card_sort_c*speaker + (1|subject), data = accurate_df)
+summary(m9)
+performance::compare_performance(m7, m9)
+performance::test_performance(m7, m9)
+
+```
+
+#### Model 10
+
+```{r}
+
+m10 <- glmmTMB(peak_pupil ~ trial_c + speaker + list_sort_c*speaker + pattern_c*speaker + (1|subject), data = accurate_df)
+summary(m10)
+performance::compare_performance(m7, m10)
+performance::test_performance(m7, m10)
+
+```
+
+#### Final Model
+
+```{r}
+
+summary(m7)
 
 ```
 
