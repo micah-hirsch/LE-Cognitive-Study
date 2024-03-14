@@ -488,7 +488,7 @@ performance::test_performance(m2, m2b)
 
 ```{r, warning = F, message = F}
 
-m3 <- glmmTMB(peak_pupil ~ trial_c + speaker + scale(list_sort_c) + (1|subject) + (1|code), data = accurate_df)
+m3 <- glmmTMB(peak_pupil ~ trial_c + speaker + scale(list_sort_c, scale = F) + (1|subject) + (1|code), data = accurate_df)
 sjPlot::tab_model(m3)
 performance::compare_performance(m2, m3)
 performance::test_performance(m2, m3)
@@ -499,19 +499,19 @@ performance::test_performance(m2, m3)
 
 ```{r, message = F, warning = F}
 
-m3b <- glmmTMB(peak_pupil ~ trial_c + speaker + scale(list_sort_c) + (1|subject), data = accurate_df)
+m3b <- glmmTMB(peak_pupil ~ trial_c + speaker + scale(list_sort_c, scale = F) + (1|subject), data = accurate_df)
 sjPlot::tab_model(m3b)
 performance::compare_performance(m3, m3b)
 performance::test_performance(m3, m3b)
 
 ```
 
-#### Comparing Model 3b with Model 2
+#### Comparing Model 3b with Model 2b
 
 ```{r, warning = F, message = F}
 
-performance::compare_performance(m2, m3b)
-performance::test_performance(m2, m3b)
+performance::compare_performance(m2b, m3b)
+performance::test_performance(m2b, m3b)
 
 ```
 
@@ -519,7 +519,7 @@ performance::test_performance(m2, m3b)
 
 ```{r, warning = F, message = F}
 
-m4 <- glmmTMB(peak_pupil ~ trial_c + speaker + scale(flanker_c) + (1|subject), data = accurate_df)
+m4 <- glmmTMB(peak_pupil ~ trial_c + speaker + scale(flanker_c, scale = F) + (1|subject), data = accurate_df)
 sjPlot::tab_model(m4, pred.labels = c("Intercept", "Trial Order", "Speaker [ALS]", "Inhibitory Control"),
                   dv.labels = "Peak Pupil Dilation")
 performance::compare_performance(m2b, m4)
@@ -531,7 +531,7 @@ performance::test_performance(m2b, m4)
 
 ```{r, warning = F, message = F}
 
-m5 <- glmmTMB(peak_pupil ~ trial_c + speaker + scale(card_sort_c) + (1|subject), data = accurate_df)
+m5 <- glmmTMB(peak_pupil ~ trial_c + speaker + scale(card_sort_c, scale = F) + (1|subject), data = accurate_df)
 sjPlot::tab_model(m5, pred.labels = c("Intercept", "Trial Order", "Speaker [ALS]", "Cognitive Flexibility"),
                   dv.labels = "Peak Pupil Dilation")
 performance::compare_performance(m2b, m5)
@@ -543,7 +543,7 @@ performance::test_performance(m2b, m5)
 
 ```{r, warning = F, message = F}
 
-m6 <- glmmTMB(peak_pupil ~ trial_c + speaker + scale(pattern_c) + (1|subject), data = accurate_df)
+m6 <- glmmTMB(peak_pupil ~ trial_c + speaker + scale(pattern_c, scale = F) + (1|subject), data = accurate_df)
 sjPlot::tab_model(m6, pred.labels = c("Intercept", "Trial Order", "Speaker [ALS]", "Processing Speed"),
                   dv.labels = "Peak Pupil Dilation")
 performance::compare_performance(m2b, m6)
@@ -555,7 +555,7 @@ performance::test_performance(m2b, m6)
 
 ```{r, warning = F, message = F}
 
-m7 <- glmmTMB(peak_pupil ~ trial_c + speaker + scale(list_sort_c)*speaker + (1|subject), data = accurate_df)
+m7 <- glmmTMB(peak_pupil ~ trial_c + speaker + scale(list_sort_c, scale = F)*speaker + (1|subject), data = accurate_df)
 sjPlot::tab_model(m7, pred.labels = c("Intercept", "Trial Order", "Speaker [ALS]", "Working Memory", 
                                       "Working Memory * Speaker [ALS]"),
                   dv.labels = "Peak Pupil Dilation")
@@ -568,7 +568,7 @@ performance::test_performance(m2b, m7)
 
 ```{r, warning = F, message = F}
 
-m8 <- glmmTMB(peak_pupil ~ trial_c + speaker + scale(list_sort_c)*speaker + scale(flanker_c)*speaker + (1|subject), data = accurate_df)
+m8 <- glmmTMB(peak_pupil ~ trial_c + speaker + scale(list_sort_c, scale = F)*speaker + scale(flanker_c, scale = F)*speaker + (1|subject), data = accurate_df)
 sjPlot::tab_model(m8, pred.labels = c("Intercept", "Trial Order", "Speaker [ALS]", "Working Memory", "Inhibitory Control",
                                       "Working Memory * Speaker [ALS]", "Inhibitory Control * Speaker [ALS]"),
                   dv.labels = "Peak Pupil Dilation")
@@ -581,7 +581,7 @@ performance::test_performance(m7, m8)
 
 ```{r, warning = F, message = F}
 
-m9 <- glmmTMB(peak_pupil ~ trial_c + speaker + scale(list_sort_c)*speaker + scale(card_sort_c)*speaker + (1|subject), data = accurate_df)
+m9 <- glmmTMB(peak_pupil ~ trial_c + speaker + scale(list_sort_c, scale = F)*speaker + scale(card_sort_c, scale = F)*speaker + (1|subject), data = accurate_df)
 sjPlot::tab_model(m9, pred.labels = c("Intercept", "Trial Order", "Speaker [ALS]", "Working Memory", "Cognitive Flexibility",
                                       "Working Memory * Speaker [ALS]", "Cognitive Flexibility * Speaker [ALS]"),
                   dv.labels = "Peak Pupil Dilation")
@@ -594,7 +594,7 @@ performance::test_performance(m7, m9)
 
 ```{r, warning = F, message = F}
 
-m10 <- glmmTMB(peak_pupil ~ trial_c + speaker + scale(list_sort_c)*speaker + scale(pattern_c)*speaker + (1|subject), data = accurate_df)
+m10 <- glmmTMB(peak_pupil ~ trial_c + speaker + scale(list_sort_c, scale = F)*speaker + scale(pattern_c, scale = F)*speaker + (1|subject), data = accurate_df)
 sjPlot::tab_model(m10, pred.labels = c("Intercept", "Trial Order", "Speaker [ALS]", "Working Memory", "Processing Speed",
                                       "Working Memory * Speaker [ALS]", "Processing Speed * Speaker [ALS]"),
                   dv.labels = "Peak Pupil Dilation")
@@ -684,6 +684,8 @@ pupil_des |>
 
 #### Perceived LE Ratings Predicted by Cognitive Measures
 
+The figure below shows the relationships between each of the cognitive measures with perceived listening effort for accurately recognized phrases. The lines in the graph are for each speaker (the control and ALS speaker). We see an interesting trend here. Unlike with peak pupil dilation, we see more negative relationships between some of these cognitive measures and peak pupil dilation. It seems like processing speed and working memory has little to no relationship with perceived listening effort, especially for the ALS speaker. However, there may be a slight negative relationship between working memory and perceived listening effort for the control speaker. It seems like inhibitory control has a negative relationship with perceived listening effort ratings for both speakers. Cognitive flexibility appears to have a negative relationship with perceived listening effort for the ALS speaker, but positive for the control speaker.
+
 ```{r, warning = F, message = F}
 
 pupil1 |>
@@ -713,6 +715,7 @@ pupil1 |>
 
 ```
 
+The figure below shows the same relationship as the figure above. However, now we are comparing these relationships between when listeners accurately perceived the phrases vs when they did not. Overall, it seems like the trends are similar between accurately perceived phrases vs inaccurately perceived phrases.
 
 ```{r, warning = F, message = F}
 
@@ -745,9 +748,174 @@ pupil1 |>
 
 ### Analysis
 
+Like with the pupil dilation data, we are using a linear mixed effects (LME) model to analyze the predictive relationships between the cognitive measures and perceived listening effort ratings. We are using the same model-building approach.
+
 #### Unconditional Model
 
 ```{r}
+
+m0 <- glmmTMB(effort_rating ~ 1 + (1|subject) + (1|code), data = accurate_df)
+summary(m0)
+sjPlot::tab_model(m0, pred.labels = c("Intercept"), dv.labels = "Perceived Listening Effort")
+performance::icc(m0)
+
+```
+
+#### Model 1
+
+```{r}
+
+m1 <- glmmTMB(effort_rating ~ 1 + (trial_c|subject) + (trial_c|code), data = accurate_df)
+sjPlot::tab_model(m1, pred.labels = c("Intercept"), dv.labels = "Perceived Listening Effort")
+performance::compare_performance(m0, m1)
+performance::test_performance(m0, m1)
+
+```
+
+#### Model 2
+
+```{r}
+
+m2 <- glmmTMB(effort_rating ~ trial_c + (trial_c|subject) + (trial_c|code), data = accurate_df)
+sjPlot::tab_model(m2, pred.labels = c("Intercept", "Trial Order"), dv.labels = "Perceived Listening Effort")
+performance::compare_performance(m1, m2)
+performance::test_performance(m1, m2)
+
+```
+#### Model 3
+
+```{r}
+
+m3 <- glmmTMB(effort_rating ~ trial_c + speaker + (trial_c|subject) + (trial_c|code), data = accurate_df)
+sjPlot::tab_model(m3, pred.labels = c("Intercept", "Trial Order", "Speaker [ALS]"), dv.labels = "Perceived Listening Effort")
+performance::compare_performance(m2, m3)
+performance::test_performance(m2, m3)
+
+```
+
+#### Model 4
+
+Quick Note Here: Working Memory was a significant predictor. However, based on the likelihood ratio test, adding it to the model did not significantly improve model fit, which is why on subsequent steps, we are removing it.
+
+```{r}
+
+m4 <- glmmTMB(effort_rating ~ trial_c + speaker + scale(list_sort_c, scale = F) + (trial_c|subject) + (trial_c|code), data = accurate_df)
+sjPlot::tab_model(m4, pred.labels = c("Intercept", "Trial Order", "Speaker [ALS]", "Working Memory"), dv.labels = "Perceived Listening Effort")
+performance::compare_performance(m3, m4)
+performance::test_performance(m3, m4)
+
+```
+#### Model 5
+
+```{r}
+
+m5 <- glmmTMB(effort_rating ~ trial_c + speaker + scale(flanker_c, scale = F) + (trial_c|subject) + (trial_c|code), data = accurate_df)
+sjPlot::tab_model(m5, pred.labels = c("Intercept", "Trial Order", "Speaker [ALS]", "Inhibitory Control"), dv.labels = "Perceived Listening Effort")
+performance::compare_performance(m3, m5)
+performance::test_performance(m3, m5)
+
+```
+
+#### Model 6
+
+```{r}
+
+m6 <- glmmTMB(effort_rating ~ trial_c + speaker + scale(card_sort_c, scale = F) + (trial_c|subject) + (trial_c|code), data = accurate_df)
+sjPlot::tab_model(m6, pred.labels = c("Intercept", "Trial Order", "Speaker [ALS]", "Cognitive Flexibility"), dv.labels = "Perceived Listening Effort")
+performance::compare_performance(m3, m6)
+performance::test_performance(m3, m6)
+
+```
+
+#### Model 7
+
+```{r}
+
+m7 <- glmmTMB(effort_rating ~ trial_c + speaker + scale(pattern_c, scale = F) + (trial_c|subject) + (trial_c|code), data = accurate_df)
+sjPlot::tab_model(m7, pred.labels = c("Intercept", "Trial Order", "Speaker [ALS]", "Processing Speed"), dv.labels = "Perceived Listening Effort")
+performance::compare_performance(m3, m7)
+performance::test_performance(m3, m7)
+
+```
+#### Model 8
+
+```{r}
+
+m8 <- glmmTMB(effort_rating ~ trial_c + speaker + scale(list_sort_c, scale = F)*speaker + (trial_c|subject) + (trial_c|code), data = accurate_df)
+sjPlot::tab_model(m8, pred.labels = c("Intercept", "Trial Order", "Speaker [ALS]", 
+                                      "Working Memory", "Working Memory * Speaker [ALS]"), 
+                  dv.labels = "Perceived Listening Effort")
+performance::compare_performance(m3, m8)
+performance::test_performance(m3, m8)
+
+```
+
+#### Model 9
+
+```{r}
+
+m9 <- glmmTMB(effort_rating ~ trial_c + speaker + scale(list_sort_c, scale = F)*speaker + 
+                scale(flanker_c, scale = F)*speaker +(trial_c|subject) + (trial_c|code), data = accurate_df)
+sjPlot::tab_model(m9, pred.labels = c("Intercept", "Trial Order", "Speaker [ALS]", 
+                                      "Working Memory", "Inhibitory Control", "Working Memory * Speaker [ALS]",
+                                      "Inhibitory Control * Speaker [ALS]"), 
+                  dv.labels = "Perceived Listening Effort")
+performance::compare_performance(m8, m9)
+performance::test_performance(m8, m9)
+
+```
+
+#### Model 10
+
+```{r}
+
+m10 <- glmmTMB(effort_rating ~ trial_c + speaker + scale(list_sort_c, scale = F)*speaker + 
+                scale(card_sort_c, scale = F)*speaker + (trial_c|subject) + (trial_c|code), data = accurate_df)
+summary(m10)
+sjPlot::tab_model(m10, pred.labels = c("Intercept", "Trial Order", "Speaker [ALS]", 
+                                      "Working Memory", "Cognitive Flexibility", "Working Memory * Speaker [ALS]",
+                                      "Cognitive Flexibility * Speaker [ALS]"), 
+                  dv.labels = "Perceived Listening Effort")
+performance::compare_performance(m8, m10)
+performance::test_performance(m8, m10)
+
+```
+
+#### Model 11
+
+```{r}
+
+m11 <- glmmTMB(effort_rating ~ trial_c + speaker + scale(list_sort_c, scale = F)*speaker + 
+                scale(card_sort_c, scale = F)*speaker + scale(pattern_c, scale = F)*speaker + (trial_c|subject) + (trial_c|code), data = accurate_df)
+summary(m11)
+sjPlot::tab_model(m11, pred.labels = c("Intercept", "Trial Order", "Speaker [ALS]", 
+                                      "Working Memory", "Cognitive Flexibility", "Processing Speed",
+                                      "Working Memory * Speaker [ALS]",
+                                      "Cognitive Flexibility * Speaker [ALS]",
+                                      "Processing Speed * Speaker [ALS]"), 
+                  dv.labels = "Perceived Listening Effort")
+performance::compare_performance(m10, m11)
+performance::test_performance(m10, m11)
+
+```
+
+#### Final Model
+
+Based on the analysis, model 10 is the best fitting model to our data. The model takeaways are below.
+
+- Unlike with the pupil dilation data, trial order did not impact perceived listening effort ratings across trials.
+- The significant main effect for speaker indicates that perceived listening effort was higher for the ALS speaker compared to the control speaker, controlling for lsiteners' working memory and cognitive flexibility skills as well as trial order.
+- The main effect of working memory indicates that listeners with higher working memory scores on average gave lower perceived listening effort ratings for the control speaker, controlling for trial order and cognitive flexibility.
+- Although the main effect of cognitive flexibility is not significant, this result suggests that on average, listeners with higher cognitive flexibility rated perceived listening effort higher for the control speaker, controlling for trial order and working memory scores. This is a marginal finding, so it should be interpreted with caution.
+- The interaction between working memory and speaker is not significant, which indicates that the relationship between working memory and perceived listening effort when listening to the ALS speaker is not significantly different than the relationship for the control speaker, controlling for trial order and cognitive flexibility. However, in the model building steps, it should be noted that this interaction was significant before adding cognitive flexibility into the model. 
+- The significant interaction between cognitive flexibility and speaker indicates that the relationship between cognitive flexibility and speaker is significantly different for the ALS speaker compared to the control speaker. In particular, the results suggest that there is a negative relationship between cognitive flexibility and perceived listening effort for the ALS speaker, controlling for trial order and listener working memory. In other words, listeners with higher cognitive flexibility scores had lower perceived listening effort ratings when they were listening to the speaker with ALS than those with lower cognitive flexibility scores.
+
+```{r}
+
+sjPlot::tab_model(m10, pred.labels = c("Intercept", "Trial Order", "Speaker [ALS]", 
+                                      "Working Memory", "Cognitive Flexibility", "Working Memory * Speaker [ALS]",
+                                      "Cognitive Flexibility * Speaker [ALS]"), 
+                  dv.labels = "Perceived Listening Effort")
 
 ```
 
