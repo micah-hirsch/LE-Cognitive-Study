@@ -1,7 +1,7 @@
 ---
 title: 'S. Bikulcius Thesis: Analysis'
 author: "Micah E. Hirsch"
-date: "2024-03-14"
+date: "2024-03-18"
 output: 
   html_document:
     toc: true
@@ -618,6 +618,8 @@ Model 7 was the best fitting model for our data. Therefore, model 7 is our final
 - The interaction between working memory and speaker is significant indicating that listeners with greater working memory on average had larger pupil dilation when listening to the speaker with ALS. 
 - The fixed effect of working memory is not significant, indicating that working memory was not predictive of peak pupil dilation when listening to the control speaker.
 
+##### Unstandaridized Model
+
 ```{r, warning = F, message = F}
 
 sjPlot::tab_model(m7, pred.labels = c("Intercept", "Trial Order", "Speaker [ALS]", "Working Memory", 
@@ -628,9 +630,22 @@ sjPlot::tab_model(m7, pred.labels = c("Intercept", "Trial Order", "Speaker [ALS]
 ```
 
 
+##### Standaridized Model
+
+```{r, warning = F, message = F}
+
+m7_standardized <- glmmTMB(scale(peak_pupil) ~ scale(trial_c) + speaker + scale(list_sort_c)*speaker + (1|subject), data = accurate_df)
+sjPlot::tab_model(m7_standardized, pred.labels = c("Intercept", "Trial Order", "Speaker [ALS]", "Working Memory", 
+                                      "Working Memory * Speaker [ALS]"),
+                  dv.labels = "Peak Pupil Dilation",
+                  file = "Tables/Peak_pupil_dilation_standardized_model.html")
+
+```
+
+
 ```{r, echo = F, warning = F, message = F}
 
-rm(m0, m1, m2, m2b, m3, m3b, m4, m5, m6, m7, m8, m9, m10, pupil_des)
+rm(m0, m1, m2, m2b, m3, m3b, m4, m5, m6, m7, m7_standardized, m8, m9, m10, pupil_des)
 
 ```
 
@@ -912,6 +927,8 @@ Based on the analysis, model 10 is the best fitting model to our data. The model
 - The interaction between working memory and speaker is not significant, which indicates that the relationship between working memory and perceived listening effort when listening to the ALS speaker is not significantly different than the relationship for the control speaker, controlling for trial order and cognitive flexibility. However, in the model building steps, it should be noted that this interaction was significant before adding cognitive flexibility into the model. 
 - The significant interaction between cognitive flexibility and speaker indicates that the relationship between cognitive flexibility and speaker is significantly different for the ALS speaker compared to the control speaker. In particular, the results suggest that there is a negative relationship between cognitive flexibility and perceived listening effort for the ALS speaker, controlling for trial order and listener working memory. In other words, listeners with higher cognitive flexibility scores had lower perceived listening effort ratings when they were listening to the speaker with ALS than those with lower cognitive flexibility scores.
 
+##### Unstandaridized Model
+
 ```{r, warning = F, message = F}
 
 sjPlot::tab_model(m10, pred.labels = c("Intercept", "Trial Order", "Speaker [ALS]", 
@@ -919,6 +936,21 @@ sjPlot::tab_model(m10, pred.labels = c("Intercept", "Trial Order", "Speaker [ALS
                                       "Cognitive Flexibility * Speaker [ALS]"), 
                   dv.labels = "Perceived Listening Effort",
                   file = "Tables/perceived_effort_model.html")
+
+```
+
+
+##### Standaridized Model
+
+```{r}
+
+m10_standardized <- glmmTMB(scale(effort_rating) ~ scale(trial_c) + speaker + scale(list_sort_c)*speaker + 
+                scale(card_sort_c)*speaker + (trial_c|subject) + (trial_c|code), data = accurate_df)
+sjPlot::tab_model(m10_standardized, pred.labels = c("Intercept", "Trial Order", "Speaker [ALS]", 
+                                      "Working Memory", "Cognitive Flexibility", "Working Memory * Speaker [ALS]",
+                                      "Cognitive Flexibility * Speaker [ALS]"), 
+                  dv.labels = "Perceived Listening Effort",
+                  file = "Tables/perceived_effort_model_standardized.html")
 
 ```
 
