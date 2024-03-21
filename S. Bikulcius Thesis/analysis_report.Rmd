@@ -1,7 +1,7 @@
 ---
 title: 'S. Bikulcius Thesis: Analysis'
 author: "Micah E. Hirsch"
-date: "2024-03-18"
+date: "2024-03-21"
 output: 
   html_document:
     toc: true
@@ -64,9 +64,10 @@ demo <- rio::import("Data/cleaned_listener_demo.csv") |>
                 ethnicity = factor(ethnicity, levels = c("Hispanic/Latino(a/e)", "Not Hispanic/Latino(a/e)", "Prefer not to answer")),
                 race = factor(race, levels = c("white/Caucasian", "Black/African American", "Asian/Asian American",
                                                "Native Hawaiian or Other Pacific Islander", "Native American or Alaska Native",
-                                               "Biracial or Multiracial", "Prefer not to answer", "Race not listed")),
+                                               "Biracial or Multiracial", "Race not listed", "Prefer not to answer")),
                 native_lang = factor(native_lang, c("American English", "Not American English"))) |>
   dplyr::rename(subject = id)
+
 ```
 
 # Listener Characteristics
@@ -132,6 +133,9 @@ cog_table |>
 
 ```{r, warning = F, message = F}
 
+# Color Palette for Figures
+my_pal <- c("#033F63", "#2CB5AE", "#28666E", "#4BAA9B", "#49E9B9", "#57A773")
+
 cog |>
   dplyr::select(subject, ends_with("_c")) |>
   dplyr::rename("Working Memory" = list_sort_c,
@@ -150,6 +154,8 @@ cog |>
                       position = position_points_jitter(width = 0.05, height = 0),
                       point_shape = '|', point_size = 3, point_alpha = 1, alpha = 0.5) +
   labs(x = "Score", y = "", color = "Cognitive Measure", fill = "Cognitive Measure") +
+  scale_color_manual(values = c(my_pal[3],my_pal[4], my_pal[5], my_pal[6])) +
+  scale_fill_manual(values = c(my_pal[3],my_pal[4], my_pal[5], my_pal[6])) +
   theme_classic()
 
 ```
@@ -162,36 +168,21 @@ rm(demo, demo_table, cog_table)
 
 ### Correlations Among Cognitive Measures
 
-For our analysis, it is important to consider the correlations between working memory, inhibitory control, cognitive flexibility, and processing speed. The figure below shows a correlation matrix. The pearson correlation coefficients are in each block and the color of the block relates to how strong the correlations are. Values closer to 1 or -1 suggest a stronger positive or negative correlation between the two cognitive measures, respectively.
+#### Overall Correlations
 
-The correlation matrix below shows a moderate positive correlation between cognitive flexibility and processing speed. There are also weak-to-moderate correlations between inhibitory control and cognitive flexibility and processing speed and working memory. This means the following:
+For our analysis, it is important to consider the correlations between working memory, inhibitory control, cognitive flexibility, processing speed, peak pupil dilation, and perceived listening effort ratings. The figure below shows a correlation matrix. The pearson correlation coefficients are in each block and the color of the block relates to how strong the correlations are. Values closer to 1 or -1 suggest a stronger positive or negative correlation between the two cognitive measures, respectively. The effort measures were averaged per listener across the speakers.
+
+The correlation matrix below shows a moderate positive correlation between cognitive flexibility and processing speed. There are also weak-to-moderate correlations between inhibitory control and cognitive flexibility and processing speed and working memory. There are also weak postive correlations between inhibitory control and cognitive flexibility with peak pupil dilation. Perceived listening effort has a weak negative relationship with working memory and inhibitory control.This means the following:
 
 -   Listeners with higher processing speed scores also tend to have higher processing speed scores
 -   Listeners with higher inhibitory control scores also tend to have higher cognitive flexibility scores
 -   Listeners with higher processing speed scores also tend to have higher working memory scores
+-   Listeners with higher inhibitory control scores tend to have higher peak pupil dilation values
+-   Listeners with higher cognitive flexibility scores tend to have higher peak pupil dilation values
+-   Listeners with higher working memory scores tend to rate their perceived listening effort lower overall
+-   Listeners with higher inhibitory control scores tend to rate perceived listening effort lower overall
 
-```{r, warning = F, message = F}
-
-cog |>
-  dplyr::select(ends_with("_c")) |>
-  dplyr::rename('Working Memory' = list_sort_c,
-                'Inhibitory Control' = flanker_c,
-                'Cognitive Flexibility' = card_sort_c,
-                'Processing Speed' = pattern_c) |>
-  cor(use = "pairwise.complete.obs") |>
-  ggcorrplot(
-    type = "lower",
-    outline.col = "white",
-    lab = TRUE,
-    insig = "blank",
-    legend.title = "Correlation"
-  )
-
-```
-
-# Speaker Characteristics
-
-In this study, we use speech samples from two speakers: a control speaker with neurotypical speech and a speaker with dysarthria secondary to Amyotropic Lateral Sclerosis (ALS). The mean speaker intelligibility is reported below. This was calculated using the listener responses. Although the speaker with ALS has a mean intelligibility of approximately 82%, about listeners still repeated approximately half of their trials incorrectly. When listening to the control speaker, there was a higher proportion of accurate responses.
+All other correlations in the matrix are very weak.
 
 ```{r, warning = F, message = F}
 
@@ -204,6 +195,141 @@ pupil <- pupil |>
                 rep_acc = factor(rep_acc, levels = c("accurate", "inaccurate"))) |>
   # recoding missing effort ratings (negative effort ratings indicate missing data)
   dplyr::mutate(effort_rating = ifelse(effort_rating < 0, NA, effort_rating))
+
+pupil1 <- dplyr::left_join(pupil, cog, by = "subject") 
+
+overall_corr <- pupil1 |>
+  dplyr::filter(rep_acc == "accurate") |>
+  dplyr::select(subject, trial, speaker, code, peak_pupil, effort_rating, ends_with("_c")) |>
+  dplyr::group_by(subject, list_sort_c, flanker_c, card_sort_c, pattern_c) |>
+  dplyr::summarize(pupil = mean(peak_pupil),
+                   effort = mean(effort_rating)) |>
+  ungroup() |>
+  dplyr::select(!subject) |>
+  dplyr::rename('Working Memory' = list_sort_c,
+                'Inhibitory Control' = flanker_c,
+                'Cognitive Flexibility' = card_sort_c,
+                'Processing Speed' = pattern_c,
+                'Peak Pupil Dilation' = pupil,
+                'Perceived Listening Effort' = effort) |>
+  cor(use = "pairwise.complete.obs") |>
+  ggcorrplot(
+    type = "lower",
+    outline.col = "white",
+    lab = TRUE,
+    insig = "blank",
+    legend.title = "Correlation",
+    title = "Overall"
+  )
+
+overall_corr
+
+```
+
+#### Correlations for the Control Speaker
+
+We are also looking at these same relationships for each speaker. The correlation matrix for these variables for the control speaker is shown below.
+
+There are some similar correlation patterns between the cognitive measures and both effort measures for the Control speaker compared to the overall matrix above. For instance, there correlations between peak pupil dilation and both cognitive flexibility and inhibitory control were still weak and positive. There was also a weak and negative correlation between inhibitory control and perceived listening effort. However, there are also some noticable differences. To start, there is a weak positive correlation between cognitive flexibility and perceived listening effort ratings. It is also interesting to note there is a stronger relationship between both effort measures (peak pupil dilation and perceived effort) for the control speaker (r = 0.26). This means the following:
+
+-   Listeners who had higher cognitive flexibility scores tend to have greater peak pupil dilation values when listening to the control speaker
+-   Listeners who had higher inhibitory control scores tend to have greater peak pupil dilation values when listening to the control speaker
+-   Listeners who had higher working memory scores tend to give the control speaker lower perceived listening effort ratings
+-   Listeners who had higher inhibitory control scores tend to give the control speaker lower perceived listening effort ratings
+-   Listeners who had higher cognitive flexibility scores tend to give the control speaker higher perceived listening effort ratings
+-   The weak positive relationship between peak pupil dilation and perceived listening effort ratings means that listeners who had greater peak pupil dilation while listening to the control speaker also tend to give the control speaker higher perceived listening effort ratings. Note that this relationship is stronger compared to when looking at the overall relationship between these measures.
+
+
+```{r, warning = F, message = F}
+
+control_corr <- pupil1 |>
+  dplyr::filter(rep_acc == "accurate") |>
+  dplyr::select(subject, speaker, trial, speaker, code, peak_pupil, effort_rating, ends_with("_c")) |>
+  dplyr::group_by(subject, speaker, list_sort_c, flanker_c, card_sort_c, pattern_c) |>
+  dplyr::summarize(pupil = mean(peak_pupil),
+                   effort = mean(effort_rating)) |>
+  ungroup() |>
+  dplyr::filter(speaker == "Control") |>
+  dplyr::select(!c(subject, speaker)) |>
+  dplyr::rename('Working Memory' = list_sort_c,
+                'Inhibitory Control' = flanker_c,
+                'Cognitive Flexibility' = card_sort_c,
+                'Processing Speed' = pattern_c,
+                'Peak Pupil Dilation' = pupil,
+                'Perceived Listening Effort' = effort) |>
+  cor(use = "pairwise.complete.obs") |>
+  ggcorrplot(
+    type = "lower",
+    outline.col = "white",
+    lab = TRUE,
+    insig = "blank",
+    legend.title = "Correlation",
+    title = "Control Speaker"
+  )
+
+control_corr
+
+```
+
+
+#### Correlations for the ALS Speaker
+
+We also ran a separate correlation matrix so we can examine the relationship between these cognitive measures and effort measures while the participants were listening to the ALS speaker.
+
+Overall, all the correlations between the cognitive measures are the same as the other two matricies above. However, there are some differences noted in the correlations between the cognitive measures and each of the effort measures. To start, the correlation between working memory and peak pupil dilation for the ALS speaker is weak and positive. However, compared to the control speaker, this relationship is stronger for the ALS speaker than the control speaker. The correlations between peak pupil dilation and both inhibitory control and cognitive flexibility also are weaker for the ALS speaker compared to the control speaker. The correlations between perceived listening effort ratings and both inhibitory control and working memory are much weaker for the ALS speaker compared to the control speaker. However, the relationship between perceived listening effort and cognitive flexibility for the ALS speaker is weak-to-moderate and negative. The relationship between the two effort measures is also very small for the ALS speaker (pretty much negligible). This relationship was stronger for the control speaker. Overall, this means:
+
+-   Listeners who had greater working memory scores tend to have greater peak pupil dilation values when listening to the ALS speaker
+-   Listeners who had greater cognitive flexibility scores tend to give the ALS speaker lower perceived listening effort ratings
+
+```{r, warning = F, message = F}
+
+ALS_corr <- pupil1 |>
+  dplyr::filter(rep_acc == "accurate") |>
+  dplyr::select(subject, speaker, trial, speaker, code, peak_pupil, effort_rating, ends_with("_c")) |>
+  dplyr::group_by(subject, speaker, list_sort_c, flanker_c, card_sort_c, pattern_c) |>
+  dplyr::summarize(pupil = mean(peak_pupil),
+                   effort = mean(effort_rating)) |>
+  ungroup() |>
+  dplyr::filter(speaker == "ALS") |>
+  dplyr::select(!c(subject, speaker)) |>
+  dplyr::rename('Working Memory' = list_sort_c,
+                'Inhibitory Control' = flanker_c,
+                'Cognitive Flexibility' = card_sort_c,
+                'Processing Speed' = pattern_c,
+                'Peak Pupil Dilation' = pupil,
+                'Perceived Listening Effort' = effort) |>
+  cor(use = "pairwise.complete.obs") |>
+  ggcorrplot(
+    type = "lower",
+    outline.col = "white",
+    lab = TRUE,
+    insig = "blank",
+    legend.title = "Correlation",
+    title = "ALS Speaker"
+  )
+
+ALS_corr
+
+```
+
+
+
+```{r, eval = F, message = F, warning = F}
+
+corr_plot <- ggpubr::ggarrange(overall_corr, control_corr, ALS_corr, ncol = 3, legend = "bottom", common.legend = T)
+
+ggsave("Figures/Correlation_matricies.png", plot = corr_plot, width = 6, height = 3, units = "in", scale = 2)
+
+rm(ALS_corr, control_corr, overall_corr)
+
+```
+
+
+# Speaker Characteristics
+
+In this study, we use speech samples from two speakers: a control speaker with neurotypical speech and a speaker with dysarthria secondary to Amyotropic Lateral Sclerosis (ALS). The mean speaker intelligibility is reported below. This was calculated using the listener responses. Although the speaker with ALS has a mean intelligibility of approximately 82%, about listeners still repeated approximately half of their trials incorrectly. When listening to the control speaker, there was a higher proportion of accurate responses.
+
+```{r, warning = F, message = F}
 
 speaker_table <- pupil |>
   dplyr::select(subject, trial, speaker, correct_words, target_number, rep_acc) |>
@@ -334,7 +460,11 @@ pupil_des |>
   geom_errorbar(aes(ymin = pupil - se, ymax = pupil + se), width = 0.4) +
   labs(x = "Speaker", y = "Peak Pupil Dilation (Arbitrary Units)") +
   theme_classic() +
+  scale_color_manual(values = my_pal) +
+  scale_fill_manual(values = my_pal) +
   theme(aspect.ratio = 1)
+
+ggsave("Figures/peak_pupil_accurate_plot.png", plot = last_plot())
 
 ```
 
@@ -355,7 +485,11 @@ pupil_des |>
   geom_errorbar(aes(ymin = pupil - se, ymax = pupil + se), width = 0.4, position = position_dodge(.9)) +
   labs(x = "Accuracy", y = "Peak Pupil Dilation (Arbitrary Units)") +
   theme_classic() +
+  scale_color_manual(values = my_pal) +
+  scale_fill_manual(values = my_pal) +
   theme(aspect.ratio = 1)
+
+ggsave("Figures/peak_pupil_accurate_inaccurate_plot.png", plot = last_plot())
 
 ```
 
@@ -364,8 +498,6 @@ pupil_des |>
 The figure below shows the relationship between each of the cognitive measures and peak pupil dilation for accurately recognized phrases. Each panel is a separate cognitive measure. We can see that there appears to be a positive relationship between peak pupil dilation and cognitive flexibility and inhibitory control for each speaker. There also appears to be a positive relationship between peak pupil dilation and working memory and processing speed for the ALS speaker. However, this relationship appears weaker when listeners were listening to the control speaker.
 
 ```{r, warning = F, message = F}
-
-pupil1 <- dplyr::left_join(pupil, cog, by = "subject") 
 
 pupil1 |>
   dplyr::filter(rep_acc == "accurate") |>
@@ -384,13 +516,17 @@ pupil1 |>
   aes(x = score,
       y = pupil,
       color = speaker,
-      ) +
-  geom_point(alpha = 0.3) +
+      shape = speaker) +
+  geom_point(alpha = .6) +
   geom_smooth(method = "lm") +
   facet_wrap("cog_measure") +
   labs(x = "Score", y = "Peak Pupil Dilation (Arbitrary Units)") +
   theme_classic() +
+  scale_color_manual(values = my_pal) +
+  scale_shape_manual(values = c(1, 2)) +
   theme(aspect.ratio = 1)
+
+ggsave("Figures/cog_peak_pupil_accurate_plot.png", plot = last_plot())
 
 ```
 
@@ -414,15 +550,17 @@ pupil1 |>
   aes(x = score,
       y = pupil,
       color = speaker,
-      ) +
-  geom_point(alpha = 0.3) +
+      shape = speaker) +
+  geom_point(alpha = .6) +
   geom_smooth(method = "lm") +
   facet_grid(rep_acc ~ cog_measure) +
   labs(x = "Score", y = "Peak Pupil Dilation (Arbitrary Units)") +
   theme_classic() +
+  scale_color_manual(values = my_pal) +
+  scale_shape_manual(values = c(1, 2)) +
   theme(aspect.ratio = 1)
 
-ggsave("Figures/peak_pupil_cog_plot.png", plot = last_plot())
+ggsave("Figures/cog_peak_pupil_acc_inacc_plot.png", plot = last_plot())
 
 ```
 
@@ -618,7 +756,6 @@ Model 7 was the best fitting model for our data. Therefore, model 7 is our final
 - The interaction between working memory and speaker is significant indicating that listeners with greater working memory on average had larger pupil dilation when listening to the speaker with ALS. 
 - The fixed effect of working memory is not significant, indicating that working memory was not predictive of peak pupil dilation when listening to the control speaker.
 
-##### Unstandaridized Model
 
 ```{r, warning = F, message = F}
 
@@ -630,9 +767,8 @@ sjPlot::tab_model(m7, pred.labels = c("Intercept", "Trial Order", "Speaker [ALS]
 ```
 
 
-##### Standaridized Model
 
-```{r, warning = F, message = F}
+```{r, eval = F, warning = F, message = F}
 
 m7_standardized <- glmmTMB(scale(peak_pupil) ~ scale(trial_c) + speaker + scale(list_sort_c)*speaker + (1|subject), data = accurate_df)
 sjPlot::tab_model(m7_standardized, pred.labels = c("Intercept", "Trial Order", "Speaker [ALS]", "Working Memory", 
@@ -678,7 +814,11 @@ pupil_des |>
   geom_errorbar(aes(ymin = effort - se, ymax = effort + se), width = 0.4) +
   labs(x = "Speaker", y = "Perceived Listening Effort Rating") +
   theme_classic() +
+  scale_color_manual(values = my_pal) +
+  scale_fill_manual(values = my_pal) +
   theme(aspect.ratio = 1)
+
+ggsave("Figures/effort_rating_accurate_plot.png", plot = last_plot())
 
 ```
 
@@ -697,7 +837,11 @@ pupil_des |>
   geom_errorbar(aes(ymin = effort - se, ymax = effort + se), width = 0.4, position = position_dodge(.9)) +
   labs(x = "Accuracy", y = "Perceived Listening Effort Rating") +
   theme_classic() +
+  scale_color_manual(values = my_pal) +
+  scale_fill_manual(values = my_pal) +
   theme(aspect.ratio = 1)
+
+ggsave("Figures/effort_rating_acc_inacc_plot.png", plot = last_plot())
 
 ```
 
@@ -725,13 +869,17 @@ pupil1 |>
   aes(x = score,
       y = effort,
       color = speaker,
-      ) +
-  geom_point(alpha = 0.3) +
+      shape = speaker) +
+  geom_point(alpha = 0.6) +
   geom_smooth(method = "lm") +
   facet_wrap("cog_measure") +
   labs(x = "Score", y = "Perceived Listening Effort Rating") +
   theme_classic() +
+  scale_color_manual(values = my_pal) +
+  scale_shape_manual(values = c(1, 2)) +
   theme(aspect.ratio = 1)
+
+ggsave("Figures/cog_effort_rating_accurate_plot.png", plot = last_plot())
 
 ```
 
@@ -755,13 +903,17 @@ pupil1 |>
   aes(x = score,
       y = effort,
       color = speaker,
-      ) +
-  geom_point(alpha = 0.3) +
+      shape = speaker) +
+  geom_point(alpha = 0.6) +
   geom_smooth(method = "lm") +
   facet_grid(rep_acc ~ cog_measure) +
   labs(x = "Score", y = "Perceived Listening Effort Rating") +
   theme_classic() +
+  scale_color_manual(values = my_pal) +
+  scale_shape_manual(values = c(1, 2)) +
   theme(aspect.ratio = 1)
+
+ggsave("Figures/cog_effort_rating_acc_inacc_plot.png", plot = last_plot())
 
 ```
 
@@ -927,8 +1079,6 @@ Based on the analysis, model 10 is the best fitting model to our data. The model
 - The interaction between working memory and speaker is not significant, which indicates that the relationship between working memory and perceived listening effort when listening to the ALS speaker is not significantly different than the relationship for the control speaker, controlling for trial order and cognitive flexibility. However, in the model building steps, it should be noted that this interaction was significant before adding cognitive flexibility into the model. 
 - The significant interaction between cognitive flexibility and speaker indicates that the relationship between cognitive flexibility and speaker is significantly different for the ALS speaker compared to the control speaker. In particular, the results suggest that there is a negative relationship between cognitive flexibility and perceived listening effort for the ALS speaker, controlling for trial order and listener working memory. In other words, listeners with higher cognitive flexibility scores had lower perceived listening effort ratings when they were listening to the speaker with ALS than those with lower cognitive flexibility scores.
 
-##### Unstandaridized Model
-
 ```{r, warning = F, message = F}
 
 sjPlot::tab_model(m10, pred.labels = c("Intercept", "Trial Order", "Speaker [ALS]", 
@@ -940,9 +1090,7 @@ sjPlot::tab_model(m10, pred.labels = c("Intercept", "Trial Order", "Speaker [ALS
 ```
 
 
-##### Standaridized Model
-
-```{r}
+```{r, eval = F, warning = F, message = F}
 
 m10_standardized <- glmmTMB(scale(effort_rating) ~ scale(trial_c) + speaker + scale(list_sort_c)*speaker + 
                 scale(card_sort_c)*speaker + (trial_c|subject) + (trial_c|code), data = accurate_df)
