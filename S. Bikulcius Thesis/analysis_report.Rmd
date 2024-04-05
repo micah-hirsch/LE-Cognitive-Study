@@ -156,7 +156,10 @@ cog |>
   labs(x = "Score", y = "", color = "Cognitive Measure", fill = "Cognitive Measure") +
   scale_color_manual(values = c(my_pal[3],my_pal[4], my_pal[5], my_pal[6])) +
   scale_fill_manual(values = c(my_pal[3],my_pal[4], my_pal[5], my_pal[6])) +
-  theme_classic()
+  theme_classic() +
+  theme(legend.position = "none")
+
+ggsave("Figures/cog_distribution.png", plot = last_plot())
 
 ```
 
