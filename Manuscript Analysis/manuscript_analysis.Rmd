@@ -1,0 +1,49 @@
+---
+title: "Cognitive Analysis"
+author: "Micah E. Hirsch"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Purpose
+
+The purpose of this document is to share the analysis code and report the results for the manuscript. The full Rmd version of the document can be found on the project's Github repository or OSF project page. The data cleaning code for the pupil and perceived listening effort ratings can be found in the Github repo. Analyses were conducted using R version 4.3.3.
+
+```{r}
+
+# Loading in the needed packages
+
+library(tidyverse)
+library(rio)
+library(glmmTMB)
+library(janitor)
+library(ggpubr)
+library(patchwork)
+library(gt)
+library(gtsummary)
+library(ggridges)
+library(performance)
+library(sjPlot)
+library(ggcorrplot)
+
+```
+
+# 
+
+
+
+```{r}
+
+plot(pressure)
+
+```
+
+
