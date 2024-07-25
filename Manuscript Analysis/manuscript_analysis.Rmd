@@ -267,13 +267,11 @@ m0_predicted_values |>
 
 ## Working Memory
 
-### Initial Model
-
 ```{r}
 
 wm_pupil <- bam(normed_pupil ~ condition +
                   s(time_norm, by = condition, k = 25) +
-                  te(time_norm, list_sort_c, k = 20) +
+                  s(list_sort_c, by = condition, k = 20) +
                   # Random Smooth for listener
                   s(time_norm, listener, bs = 'fs', m = 1),
                 discrete = T,
@@ -283,6 +281,16 @@ wm_pupil <- bam(normed_pupil ~ condition +
                 data = pupil)
 
 summary.gam(wm_pupil)
+
+plot_diff(wm_pupil, view = "list_sort_c",
+          comp = list(condition = c("ALS Inaccurate", "ALS Accurate")))
+
+plot_diff(wm_pupil, view = "list_sort_c",
+          comp = list(condition = c("Control Inaccurate", "Control Accurate")))
+
+plot_diff(wm_pupil, view = "list_sort_c",
+          comp = list(condition = c("ALS Accurate", "Control Accurate")))
+
 
 ```
 
@@ -304,76 +312,33 @@ compareML(m0_pupil, wm_pupil, signif.stars = T, suggest.report = T)
 
 ```
 
-### Model 1
-
 ```{r}
 
-wm_pupil_1 <- bam(normed_pupil ~ condition +
-                  s(time_norm, by = condition, k = 25) +
-                  te(time_norm, list_sort_c, by = speaker, k = 20) +
-                  # Random Smooth for listener
-                  s(time_norm, listener, bs = 'fs', m = 1),
-                discrete = T,
-                AR.start = start_event,
-                rho = .9341941,
-                family = "scat",
-                data = pupil)
+wm_pred <- expand_grid(
+  time_norm = seq(from=min(pupil$time_norm), 
+              to=max(pupil$time_norm), 
+              length.out = 100),
+  list_sort_c = seq(from=min(pupil$list_sort_c), 
+              to=max(pupil$list_sort_c), 
+              length.out = 100),
+  condition = c("Control Accurate", "Control Inaccurate", "ALS Accurate", "ALS Inaccurate"),
+  listener = c("LE01", "LE02", "LE04", "LE05", "LE06", "LE07", "LE08", "LE09", "LE10", "LE11",
+               "LE12", "LE13", "LE15", "LE16", "LE18", "LE19", "LE20", "LE21", "LE22", "LE23",
+               "LE24", "LE25", "LE26", "LE27", "LE28", "LE29", "LE30", "LE31", "LE32", "LE33", 
+               "LE34", "LE35", "LE36", "LE38")
+)
 
-summary.gam(wm_pupil_1)
+wm_pred <- predict(wm_pupil, newdata = wm_pred, 
+                      se.fit = TRUE) |> 
+  as_tibble() |>
+  cbind(wm_pred)
+
 
 
 ```
 
-#### Model Check
 
-```{r}
 
-gam.check(wm_pupil_1)
 
-acf_resid(wm_pupil_1)
 
-```
-
-#### Model Comparison
-
-```{r}
-
-compareML(m0_pupil, wm_pupil_1, signif.stars = T, suggest.report = T)
-
-```
-### Model 2
-
-```{r}
-
-wm_pupil_2 <- bam(normed_pupil ~ condition +
-                  s(time_norm, by = condition, k = 25) +
-                  te(time_norm, list_sort_c, by = condition, k = 20) +
-                  # Random Smooth for listener
-                  s(time_norm, listener, bs = 'fs', m = 1),
-                discrete = T,
-                AR.start = start_event,
-                rho = .9341941,
-                family = "scat",
-                data = pupil)
-
-summary.gam(wm_pupil_2)
-
-```
-
-#### Model Check
-
-```{r}
-
-gam.check(wm_pupil_2)
-
-acf_resid(wm_pupil_2)
-
-```
-#### Model Comparison
-
-```{r}
-
-compareML(m0_pupil, wm_pupil_2, signif.stars = T, suggest.report = T)
-
-```
 
