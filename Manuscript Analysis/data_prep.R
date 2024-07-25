@@ -37,17 +37,12 @@ cog_data <- rio::import(file) |>
   dplyr::select(-c(type)) |>
   tidyr::pivot_wider(names_from = measure,
                      values_from = score) |>
-  dplyr::rename(id = pin)
+  dplyr::rename(subject = pin)
 
 rm(file)
 
 # Importing demographic data
 
 setwd("~/Documents/LE-Cognitive-Study/Manuscript Analysis/Cleaned Data")
-
-demo <- rio::import("cleaned_listener_demo.csv")
-
-demo <- demo |>
-  dplyr::left_join(cog_data, by = "id")
 
 rio::export(cog_data, "cleaned_cog_data.csv")

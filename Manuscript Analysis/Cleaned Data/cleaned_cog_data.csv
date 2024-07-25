@@ -1,4 +1,4 @@
-id,list_sort_u,list_sort_c,flanker_u,flanker_c,card_sort_u,card_sort_c,pattern_u,pattern_c
+subject,list_sort_u,list_sort_c,flanker_u,flanker_c,card_sort_u,card_sort_c,pattern_u,pattern_c
 LE02,101,92,103,89,111,105,120,111
 LE01,128,125,95,74,101,83,99,90
 LE04,117,117,90,71,100,87,122,117
