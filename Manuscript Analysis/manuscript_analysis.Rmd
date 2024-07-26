@@ -35,6 +35,7 @@ library(sjPlot)
 library(ggcorrplot)
 library(mgcv) # install.packages("mgcv")
 library(itsadug) # install.packages("itsadug")
+library(viridis) # install.packages("viridis")
 
 # Load in the listener demographics data 
 
@@ -56,6 +57,10 @@ cog <- rio::import("Cleaned Data/cleaned_cog_data.csv")
 # Loading in the pupil data
 
 pupil <- rio::import("Cleaned Data/cleaned_pupil_data_normalized.csv") 
+
+# Loading in the PLE data
+
+ple <- rio::import("Cleaned Data/cleaned_ple_data.csv") 
 
 # Loading in the phrase accuracy data
 
@@ -191,7 +196,7 @@ pupil <- pupil |>
 
 ## Base Model
 
-Final Model from parent study
+Final Model from parent study. This is just modeling pupil dilation changing by levels of condition (interaction between speaker and phrase repetition accuracy).
 
 ```{r}
 
@@ -267,11 +272,13 @@ m0_predicted_values |>
 
 ## Working Memory
 
+Now, to test whether pupil dilation is impacted by working memory capacity, a smooth was added to this model: the age-corrected standardized working memory scores from the NIH Toolbox Cognition battery. The smooth was added per level of "condition" (interaction between speaker and repetition accuracy).
+
 ```{r}
 
 wm_pupil <- bam(normed_pupil ~ condition +
                   s(time_norm, by = condition, k = 25) +
-                  s(list_sort_c, by = condition, k = 20) +
+                  s(list_sort_c, by = condition) +
                   # Random Smooth for listener
                   s(time_norm, listener, bs = 'fs', m = 1),
                 discrete = T,
@@ -282,19 +289,17 @@ wm_pupil <- bam(normed_pupil ~ condition +
 
 summary.gam(wm_pupil)
 
-plot_diff(wm_pupil, view = "list_sort_c",
-          comp = list(condition = c("ALS Inaccurate", "ALS Accurate")))
-
-plot_diff(wm_pupil, view = "list_sort_c",
-          comp = list(condition = c("Control Inaccurate", "Control Accurate")))
-
-plot_diff(wm_pupil, view = "list_sort_c",
-          comp = list(condition = c("ALS Accurate", "Control Accurate")))
+wm_prediction <- plot_smooth(wm_pupil,
+            view = "list_sort_c",
+            plot_all = "condition",
+            rug = F, se = 1, rm.ranef = T)
 
 
 ```
 
 #### Model Check
+
+Checking model assumptions by plotting residuals and autocorrelation plots. Overall, the plots indicate the model is a good fit to the data.
 
 ```{r}
 
@@ -311,34 +316,625 @@ acf_resid(wm_pupil)
 compareML(m0_pupil, wm_pupil, signif.stars = T, suggest.report = T)
 
 ```
+### Working Memory vs Pupil Dilation
 
 ```{r}
 
-wm_pred <- expand_grid(
-  time_norm = seq(from=min(pupil$time_norm), 
-              to=max(pupil$time_norm), 
-              length.out = 100),
-  list_sort_c = seq(from=min(pupil$list_sort_c), 
-              to=max(pupil$list_sort_c), 
-              length.out = 100),
-  condition = c("Control Accurate", "Control Inaccurate", "ALS Accurate", "ALS Inaccurate"),
-  listener = c("LE01", "LE02", "LE04", "LE05", "LE06", "LE07", "LE08", "LE09", "LE10", "LE11",
-               "LE12", "LE13", "LE15", "LE16", "LE18", "LE19", "LE20", "LE21", "LE22", "LE23",
-               "LE24", "LE25", "LE26", "LE27", "LE28", "LE29", "LE30", "LE31", "LE32", "LE33", 
-               "LE34", "LE35", "LE36", "LE38")
-)
+wm_predicted_values <- wm_prediction[[1]][c("condition", "list_sort_c", "fit", "ul", "ll")] |>
+  dplyr::mutate(rep_acc = ifelse(grepl("inaccurate", condition, ignore.case = T), "inaccurate", "accurate"),
+                speaker = ifelse(grepl("Control", condition, ignore.case = T), "Control", "ALS"),
+                speaker = factor(speaker, levels = c("Control", "ALS")))
 
-wm_pred <- predict(wm_pupil, newdata = wm_pred, 
-                      se.fit = TRUE) |> 
-  as_tibble() |>
-  cbind(wm_pred)
+wm_predicted_values |>
+  ggplot() +
+  aes(x = list_sort_c,
+      y = fit,
+      color = rep_acc,
+      fill = rep_acc) +
+  geom_ribbon(aes(ymin = ul, ymax = ll), alpha = .5, color = NA) +
+  geom_line() +
+  facet_wrap("speaker") +
+  theme_bw() +
+  theme(aspect.ratio = 1,
+        legend.position = "bottom") +
+  labs(x = "Working Memory",
+       y = "Pupil Dilation (Arbitrary Units)",
+       color = "Repetition Accuracy",
+       fill = "Repetition Accuracy",
+       linetype = "Repetition Accuracy") +
+  scale_color_manual(values = c(my_pal[1], my_pal[2])) +
+  scale_fill_manual(values = c(my_pal[1], my_pal[2]))
 
+```
 
+## Inhibitory Control
+
+```{r}
+
+inhib_pupil <- bam(normed_pupil ~ condition +
+                  s(time_norm, by = condition, k = 25) +
+                  s(flanker_c, by = condition) +
+                  # Random Smooth for listener
+                  s(time_norm, listener, bs = 'fs', m = 1),
+                discrete = T,
+                AR.start = start_event,
+                rho = .9341941,
+                family = "scat",
+                data = pupil)
+
+summary.gam(inhib_pupil)
+
+inhib_prediction <- plot_smooth(inhib_pupil,
+            view = "flanker_c",
+            plot_all = "condition",
+            rug = F, se = 1, rm.ranef = T)
 
 ```
 
 
+#### Model Check
+
+```{r}
 
 
+gam.check(inhib_pupil)
 
+acf_resid(inhib_pupil)
+
+```
+
+
+#### Model Comparison
+
+```{r}
+
+compareML(m0_pupil, inhib_pupil, signif.stars = T, suggest.report = T)
+
+```
+
+### Inhibitory Control vs Pupil Dilation
+
+```{r}
+
+inhib_predicted_values <- inhib_prediction[[1]][c("condition", "flanker_c", "fit", "ul", "ll")] |>
+  dplyr::mutate(rep_acc = ifelse(grepl("inaccurate", condition, ignore.case = T), "inaccurate", "accurate"),
+                speaker = ifelse(grepl("Control", condition, ignore.case = T), "Control", "ALS"),
+                speaker = factor(speaker, levels = c("Control", "ALS")))
+
+inhib_predicted_values |>
+  ggplot() +
+  aes(x = flanker_c,
+      y = fit,
+      color = rep_acc,
+      fill = rep_acc) +
+  geom_ribbon(aes(ymin = ul, ymax = ll), alpha = .5, color = NA) +
+  geom_line() +
+  facet_wrap("speaker") +
+  theme_bw() +
+  theme(aspect.ratio = 1,
+        legend.position = "bottom") +
+  labs(x = "Inhibitory Control",
+       y = "Pupil Dilation (Arbitrary Units)",
+       color = "Repetition Accuracy",
+       fill = "Repetition Accuracy",
+       linetype = "Repetition Accuracy") +
+  scale_color_manual(values = c(my_pal[1], my_pal[2])) +
+  scale_fill_manual(values = c(my_pal[1], my_pal[2]))
+
+```
+
+## Cognitive Flexibility
+
+```{r}
+
+flex_pupil <- bam(normed_pupil ~ condition +
+                  s(time_norm, by = condition, k = 25) +
+                  s(card_sort_c, by = condition, k = 20) +
+                  # Random Smooth for listener
+                  s(time_norm, listener, bs = 'fs', m = 1),
+                discrete = T,
+                AR.start = start_event,
+                rho = .9341941,
+                family = "scat",
+                data = pupil)
+
+summary.gam(flex_pupil)
+
+flex_prediction <- plot_smooth(flex_pupil,
+            view = "card_sort_c",
+            plot_all = "condition",
+            rug = F, se = 1, rm.ranef = T)
+
+```
+
+
+### Model Check
+
+```{r}
+
+gam.check(flex_pupil)
+
+acf_resid(flex_pupil)
+
+```
+
+
+### Model Comparison
+
+```{r}
+
+compareML(m0_pupil, flex_pupil, signif.stars = T, suggest.report = T)
+
+```
+
+### Cognitive Flexibility vs Pupil Dilation
+
+```{r}
+
+flex_predicted_values <- flex_prediction[[1]][c("condition", "card_sort_c", "fit", "ul", "ll")] |>
+  dplyr::mutate(rep_acc = ifelse(grepl("inaccurate", condition, ignore.case = T), "inaccurate", "accurate"),
+                speaker = ifelse(grepl("Control", condition, ignore.case = T), "Control", "ALS"),
+                speaker = factor(speaker, levels = c("Control", "ALS")))
+
+flex_predicted_values |>
+  ggplot() +
+  aes(x = card_sort_c,
+      y = fit,
+      color = rep_acc,
+      fill = rep_acc) +
+  geom_ribbon(aes(ymin = ul, ymax = ll), alpha = .5, color = NA) +
+  geom_line() +
+  facet_wrap("speaker") +
+  theme_bw() +
+  theme(aspect.ratio = 1,
+        legend.position = "bottom") +
+  labs(x = "Cognitive Flexibility",
+       y = "Pupil Dilation (Arbitrary Units)",
+       color = "Repetition Accuracy",
+       fill = "Repetition Accuracy",
+       linetype = "Repetition Accuracy") +
+  scale_color_manual(values = c(my_pal[1], my_pal[2])) +
+  scale_fill_manual(values = c(my_pal[1], my_pal[2]))
+
+```
+
+## Processing Speed
+
+```{r}
+
+process_pupil <- bam(normed_pupil ~ condition +
+                  s(time_norm, by = condition, k = 25) +
+                  s(pattern_c, by = condition, k = 15) +
+                  # Random Smooth for listener
+                  s(time_norm, listener, bs = 'fs', m = 1),
+                discrete = T,
+                AR.start = start_event,
+                rho = .9341941,
+                family = "scat",
+                data = pupil)
+
+summary.gam(process_pupil)
+
+process_prediction <- plot_smooth(process_pupil,
+            view = "pattern_c",
+            plot_all = "condition",
+            rug = F, se = 1, rm.ranef = T)
+
+```
+
+
+### Model Check
+
+```{r}
+
+gam.check(process_pupil)
+
+acf_resid(process_pupil)
+
+```
+
+
+### Model Comparison
+
+```{r}
+
+compareML(m0_pupil, process_pupil, signif.stars = T, suggest.report = T)
+
+```
+
+
+### Processing Speed vs Pupil Dilation
+
+```{r}
+
+process_predicted_values <- process_prediction[[1]][c("condition", "pattern_c", "fit", "ul", "ll")] |>
+  dplyr::mutate(rep_acc = ifelse(grepl("inaccurate", condition, ignore.case = T), "inaccurate", "accurate"),
+                speaker = ifelse(grepl("Control", condition, ignore.case = T), "Control", "ALS"),
+                speaker = factor(speaker, levels = c("Control", "ALS")))
+
+process_predicted_values |>
+  ggplot() +
+  aes(x = pattern_c,
+      y = fit,
+      color = rep_acc,
+      fill = rep_acc) +
+  geom_ribbon(aes(ymin = ul, ymax = ll), alpha = .5, color = NA) +
+  geom_line() +
+  facet_wrap("speaker") +
+  theme_bw() +
+  theme(aspect.ratio = 1,
+        legend.position = "bottom") +
+  labs(x = "Processing Speed",
+       y = "Pupil Dilation (Arbitrary Units)",
+       color = "Repetition Accuracy",
+       fill = "Repetition Accuracy",
+       linetype = "Repetition Accuracy") +
+  scale_color_manual(values = c(my_pal[1], my_pal[2])) +
+  scale_fill_manual(values = c(my_pal[1], my_pal[2]))
+
+```
+
+
+# Perceived Listening Effort Ratings
+
+## Visualization
+
+```{r}
+
+# Merge PLE data with rep acc and listener cog
+
+ple <- ple |>
+  dplyr::left_join(acc, by = c("subject", "trial")) |>
+  dplyr::filter(!is.na(rep_acc)) |>
+  dplyr::left_join(cog, by = "subject") |>
+  dplyr::filter(effort_rating > 0) |>
+  dplyr::filter(effort_rating <= 7) |>
+  dplyr::mutate(trial_c = trial - 6,
+                speaker = factor(speaker, levels = c("Control", "ALS")))
+
+ple |>
+  dplyr::select(subject, trial, speaker, code, effort_rating, rep_acc, ends_with("_c")) |>
+  dplyr::group_by(subject, speaker, rep_acc, list_sort_c, flanker_c, card_sort_c, pattern_c) |>
+  dplyr::summarize(effort = mean(effort_rating)) |>
+  dplyr::rename('Working Memory' = list_sort_c,
+                'Inhibitory Control' = flanker_c,
+                'Cognitive Flexibility' = card_sort_c,
+                'Processing Speed' = pattern_c) |>
+  tidyr::pivot_longer(cols = "Working Memory":"Processing Speed",
+                     names_to = "cog_measure",
+                     values_to = "score") |>
+  ungroup() |>
+  ggplot() +
+  aes(x = score,
+      y = effort,
+      color = speaker,
+      shape = speaker) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "lm") +
+  facet_grid(rep_acc ~ cog_measure) +
+  labs(x = "Score", y = "Perceived Listening Effort Rating") +
+  theme_classic() +
+  scale_color_manual(values = my_pal) +
+  scale_shape_manual(values = c(1, 2)) +
+  theme(aspect.ratio = 1)
+
+```
+
+## Models
+
+### Fully Unconditional Model
+
+```{r, warning = F, message = F}
+
+
+m0 <- glmmTMB(effort_rating ~ 1 + (1|subject) + (1|code), data = ple)
+sjPlot::tab_model(m0, pred.labels = "Intercept",
+                  dv.labels = "Perceived Listening Effort")
+
+performance::icc(m0)
+
+```
+
+### Model 1
+
+In this step, we are adding trial order (trial_c) as a random slop for both the listener (subject) and phrase (code) random intercepts. The random intercept of trial order significantly improved model fit.
+
+```{r, warning = F, message = F}
+
+m1<- glmmTMB(effort_rating ~ 1 + (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m1, pred.labels = "Intercept",
+                  dv.labels = "Perceived Listening Effort")
+performance::test_performance(m0, m1)
+
+```
+
+### Model 2
+
+Trial order is the first random effect added to the model. Trial order is added in order to control for any possible order effects in the data. As noted in the results below, adding trial order did not significantly improve model fit to the data. However, I'll leave this fixed effect in the model to act as a covariate.
+
+```{r, warning = F, message = F}
+
+m2 <- glmmTMB(effort_rating ~ trial_c + (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m2, 
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m1, m2)
+
+```
+
+### Model 3
+
+Adding the main fixed effect of speaker significantly improved the model fit.
+
+```{r, warning = F, message = F}
+
+m3 <- glmmTMB(effort_rating ~ trial_c + speaker + (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m3,
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m2, m3)
+
+```
+
+### Model 4
+
+The main fixed effect of repetition accuracy significantly improved model fit.
+
+```{r, warning = F, message = F}
+
+m4 <- glmmTMB(effort_rating ~ trial_c + speaker + rep_acc + (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m4,
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m3, m4)
+
+
+```
+### Model 5
+
+The interaction term between speaker and repetition accuracy did not significantly improve model fit. This indicates that the magnitude between accurate and inaccurate ratings was similar for both speakers.
+
+```{r, warning = F, message = F}
+
+m5 <- glmmTMB(effort_rating ~ trial_c + speaker + rep_acc + speaker*rep_acc + (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m5,
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m4, m5)
+
+
+```
+### Model 6
+
+```{r}
+
+m6 <- glmmTMB(effort_rating ~ trial_c + speaker + rep_acc + scale(list_sort_c, scale = F) + (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m6,
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m4, m6)
+
+```
+### Model 7
+
+```{r}
+
+m7 <- glmmTMB(effort_rating ~ trial_c + speaker + rep_acc + scale(flanker_c, scale = F) + (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m7,
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m4, m7)
+
+```
+### Model 8
+
+```{r}
+
+m8 <- glmmTMB(effort_rating ~ trial_c + speaker + rep_acc + scale(card_sort_c, scale = F) + (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m8,
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m4, m8)
+
+```
+
+### Model 9
+
+```{r}
+
+m9 <- glmmTMB(effort_rating ~ trial_c + speaker + rep_acc + scale(pattern_c, scale = F) + (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m9,
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m4, m9)
+
+
+```
+### Model 10
+
+```{r}
+
+m10 <- glmmTMB(effort_rating ~ trial_c + speaker + rep_acc + speaker*scale(list_sort_c, scale = F) + (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m10,
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m4, m10)
+
+```
+
+### Model 11
+
+```{r}
+
+m11 <- glmmTMB(effort_rating ~ trial_c + speaker + rep_acc + speaker*scale(flanker_c, scale = F) + (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m11,
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m4, m11)
+
+```
+
+### Model 12
+
+```{r}
+
+m12 <- glmmTMB(effort_rating ~ trial_c + speaker + rep_acc + speaker*scale(card_sort_c, scale = F) + (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m12,
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m4, m12)
+
+```
+### Model 13
+
+```{r}
+
+m13 <- glmmTMB(effort_rating ~ trial_c + speaker + rep_acc + 
+                 speaker*scale(card_sort_c, scale = F) +  speaker*scale(pattern_c, scale = F) +(trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m13,
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m12, m13)
+
+```
+
+### Model 14
+
+```{r}
+
+m14 <- glmmTMB(effort_rating ~ trial_c + speaker + rep_acc + 
+                 speaker*scale(card_sort_c, scale = F) +  speaker*scale(list_sort_c, scale = F) + (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m14,
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m12, m14)
+
+```
+
+### Model 15
+
+```{r}
+
+m15 <- glmmTMB(effort_rating ~ trial_c + speaker + rep_acc + 
+                 speaker*scale(card_sort_c, scale = F) +  speaker*scale(list_sort_c, scale = F) + 
+                 rep_acc*scale(list_sort_c, scale = F) +
+                 (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m15,
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m14, m15)
+
+```
+### Model 16
+
+```{r}
+
+m16 <- glmmTMB(effort_rating ~ trial_c + speaker + rep_acc + 
+                 speaker*scale(card_sort_c, scale = F) + speaker*scale(list_sort_c, scale = F) + 
+                 rep_acc*scale(list_sort_c, scale = F) + rep_acc*scale(flanker_c, scale = F) +
+                 (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m16,
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m15, m16)
+
+```
+### Model 17
+
+```{r}
+
+m17 <- glmmTMB(effort_rating ~ trial_c + speaker + rep_acc + 
+                 speaker*scale(card_sort_c, scale = F) + speaker*scale(list_sort_c, scale = F) + 
+                 rep_acc*scale(list_sort_c, scale = F) + rep_acc*scale(card_sort_c, scale = F) +
+                 (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m17,
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m15, m17)
+
+```
+
+### Model 18
+
+```{r}
+
+m18 <- glmmTMB(effort_rating ~ trial_c + speaker + rep_acc + 
+                 speaker*scale(card_sort_c, scale = F) + speaker*scale(list_sort_c, scale = F) + 
+                 rep_acc*scale(list_sort_c, scale = F) + rep_acc*scale(card_sort_c, scale = F) + rep_acc*scale(pattern_c, scale = F) +
+                 (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m18,
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m17, m18)
+
+```
+
+### Model 19
+
+```{r}
+
+m19 <- glmmTMB(effort_rating ~ trial_c + speaker + rep_acc + 
+                 speaker*scale(card_sort_c, scale = F) + speaker*scale(list_sort_c, scale = F) + 
+                 rep_acc*scale(list_sort_c, scale = F) + rep_acc*scale(card_sort_c, scale = F) + 
+                 speaker*rep_acc*scale(list_sort_c, scale = F) +
+                 (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m19,
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m17, m19)
+
+```
+### Model 20
+
+```{r}
+
+m20 <- glmmTMB(effort_rating ~ trial_c + speaker + rep_acc + 
+                 speaker*scale(card_sort_c, scale = F) + speaker*scale(list_sort_c, scale = F) + 
+                 rep_acc*scale(list_sort_c, scale = F) + rep_acc*scale(card_sort_c, scale = F) + 
+                 speaker*rep_acc*scale(flanker_c, scale = F) +
+                 (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m20,
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m17, m20)
+
+```
+### Model 21
+
+```{r}
+
+m21 <- glmmTMB(effort_rating ~ trial_c + speaker + rep_acc + 
+                 speaker*scale(card_sort_c, scale = F) + speaker*scale(list_sort_c, scale = F) + 
+                 rep_acc*scale(list_sort_c, scale = F) + rep_acc*scale(card_sort_c, scale = F) + 
+                 speaker*rep_acc*scale(card_sort_c, scale = F) +
+                 (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m21,
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m17, m21)
+
+```
+### Model 22
+
+```{r}
+
+m22 <- glmmTMB(effort_rating ~ trial_c + speaker + rep_acc + 
+                 speaker*scale(card_sort_c, scale = F) + speaker*scale(list_sort_c, scale = F) + 
+                 rep_acc*scale(list_sort_c, scale = F) + rep_acc*scale(card_sort_c, scale = F) + 
+                 speaker*rep_acc*scale(pattern_c, scale = F) +
+                 (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m22,
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m17, m22)
+
+```
+## Final Model
+
+```{r}
+
+sjPlot::tab_model(m17,
+                  dv.labels = "Perceived Listening Effort")
+
+```
 
