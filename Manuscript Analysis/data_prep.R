@@ -2,7 +2,7 @@
 
 # Author: Micah E. Hirsch, Ph.D. (mhirsch@fsu.edu)
 
-# Data: 7/24/2024
+# Data: 10/15/2024
 
 # Purpose: To load and format cognitive data and merge it with the cleaned 
 # data from https://github.com/micah-hirsch/Listening-Effort-in-Dysarthria
@@ -15,7 +15,7 @@ library(janitor)
 
 # Setting Working Directory
 
-setwd("~/Documents/LE-Cognitive-Study/Raw Data")
+setwd("D:\\Listening Effort Study\\Raw Data\\Cognitive Data")
 
 file <- list.files()
 
@@ -41,8 +41,28 @@ cog_data <- rio::import(file) |>
 
 rm(file)
 
+# Creating Data Dictionary
+
+library(datadictionary)
+
+labels <- c(
+  subject = "Participant ID",
+  list_sort_u = "Uncorrected Standardized Working Memory Score",
+  list_sort_c = "Age-Corrected Standardized Working Memory Score",
+  flanker_u = "Uncorrected Standardized Inhibitory Control Score",
+  flanker_c = "Age-Corrected Standardized Inhbitory Control Score",
+  card_sort_u = "Uncorrected Standardized Cognitive Flexibility Score",
+  card_sort_c = "Age-Correct Standardized Cognitive Flexibility Score",
+  pattern_u = "Uncorrected Standardized Processing Speed Score",
+  pattern_c = "Age-Corrected Standardized Processing Speed Score"
+)
+
+data_dict <- create_dictionary(cog_data, var_labels = labels)
+
 # Importing demographic data
 
-setwd("~/Documents/LE-Cognitive-Study/Manuscript Analysis/Cleaned Data")
+setwd("C:\\Users\\mehirsch\\Documents\\GitHub\\LE-Cognitive-Study\\Manuscript Analysis\\Cleaned Data")
 
 rio::export(cog_data, "cleaned_cog_data.csv")
+
+rio::export(data_dict, "cleaned_cog_data_dictionary.csv")

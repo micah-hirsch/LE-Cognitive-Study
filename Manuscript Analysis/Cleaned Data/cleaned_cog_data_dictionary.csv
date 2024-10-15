@@ -1,0 +1,45 @@
+item,label,class,summary,value
+"","","",Rows in dataset,34
+"","","",Columns in dataset,9
+subject,Participant ID,character,unique responses,34
+"","","",missing,0
+list_sort_u,Uncorrected Standardized Working Memory Score,integer,mean,108
+"","","",median,109
+"","","",min,86
+"","","",max,128
+"","","",missing,0
+list_sort_c,Age-Corrected Standardized Working Memory Score,integer,mean,102
+"","","",median,102
+"","","",min,75
+"","","",max,125
+"","","",missing,0
+flanker_u,Uncorrected Standardized Inhibitory Control Score,integer,mean,102
+"","","",median,103
+"","","",min,90
+"","","",max,112
+"","","",missing,0
+flanker_c,Age-Corrected Standardized Inhbitory Control Score,integer,mean,86
+"","","",median,87
+"","","",min,64
+"","","",max,109
+"","","",missing,0
+card_sort_u,Uncorrected Standardized Cognitive Flexibility Score,integer,mean,111
+"","","",median,112
+"","","",min,100
+"","","",max,119
+"","","",missing,0
+card_sort_c,Age-Correct Standardized Cognitive Flexibility Score,integer,mean,104
+"","","",median,106
+"","","",min,80
+"","","",max,131
+"","","",missing,0
+pattern_u,Uncorrected Standardized Processing Speed Score,integer,mean,120
+"","","",median,120
+"","","",min,69
+"","","",max,153
+"","","",missing,0
+pattern_c,Age-Corrected Standardized Processing Speed Score,integer,mean,110
+"","","",median,111
+"","","",min,54
+"","","",max,146
+"","","",missing,0
