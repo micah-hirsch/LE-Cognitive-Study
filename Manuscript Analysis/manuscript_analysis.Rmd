@@ -15,24 +15,24 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Purpose
 
-The purpose of this document is to share the analysis code and report the results for the manuscript. The full Rmd version of the document can be found on the project's Github repository or OSF project page. The data cleaning code for the pupil and perceived listening effort ratings can be found in the Github repo. Analyses were conducted using R version 4.3.3.
+The purpose of this document is to share the analysis code and report the results for the manuscript. The full Rmd version of the document can be found on the project's Github repository or OSF project page. The data cleaning code for the pupil and perceived listening effort ratings can be found in the Github repo. Analyses were conducted using R version 4.4.1.
 
 ```{r}
 
 # Loading in the needed packages
 
-library(tidyverse)
-library(rio)
-library(glmmTMB)
-library(janitor)
-library(ggpubr)
-library(patchwork)
-library(gt)
-library(gtsummary)
-library(ggridges)
-library(performance)
-library(sjPlot)
-library(ggcorrplot)
+library(tidyverse) # install.packages("tidyverse")
+library(rio) # install.packages("rio")
+library(glmmTMB) # install.packages("glmmTMB")
+library(janitor) # install.packages("janitor")
+library(ggpubr) # install.packages("ggpubr")
+library(patchwork) # install.packages("patchwork")
+library(gt) # install.packages("gt")
+library(gtsummary) # install.packages("gtsummary")
+library(ggridges) # install.packages("ggridges")
+library(performance) # install.packages("performance")
+library(sjPlot) # install.packages("sjPlot")
+library(ggcorrplot) # install.packages("ggcorrplot")
 library(mgcv) # install.packages("mgcv")
 library(itsadug) # install.packages("itsadug")
 library(viridis) # install.packages("viridis")
@@ -162,6 +162,26 @@ cog |>
 
 ```
 
+```{r}
+
+cog |>
+  dplyr::select(ends_with("_c")) |>
+  dplyr::rename('Working Memory' = list_sort_c,
+                'Inhibitory Control' = flanker_c,
+                'Cognitive Flexibility' = card_sort_c,
+                'Processing Speed' = pattern_c) |>
+  cor(use = "pairwise.complete.obs") |>
+  ggcorrplot(
+    type = "lower",
+    outline.col = "white",
+    lab = TRUE,
+    insig = "blank",
+    legend.title = "Correlation"
+  )
+
+```
+
+
 
 ```{r}
 
@@ -234,6 +254,7 @@ m0_prediction <- plot_smooth(m0_pupil,
             rug = F, se = 1, rm.ranef = T)
 
 ```
+
 
 ```{r}
 
@@ -429,7 +450,7 @@ inhib_predicted_values |>
 
 flex_pupil <- bam(normed_pupil ~ condition +
                   s(time_norm, by = condition, k = 25) +
-                  s(card_sort_c, by = condition, k = 20) +
+                  s(card_sort_c, by = condition) +
                   # Random Smooth for listener
                   s(time_norm, listener, bs = 'fs', m = 1),
                 discrete = T,
@@ -504,7 +525,7 @@ flex_predicted_values |>
 
 process_pupil <- bam(normed_pupil ~ condition +
                   s(time_norm, by = condition, k = 25) +
-                  s(pattern_c, by = condition, k = 15) +
+                  s(pattern_c, by = condition) +
                   # Random Smooth for listener
                   s(time_norm, listener, bs = 'fs', m = 1),
                 discrete = T,
@@ -844,8 +865,8 @@ performance::test_performance(m15, m16)
 ```{r}
 
 m17 <- glmmTMB(effort_rating ~ trial_c + speaker + rep_acc + 
-                 speaker*scale(card_sort_c, scale = F) + speaker*scale(list_sort_c, scale = F) + 
-                 rep_acc*scale(list_sort_c, scale = F) + rep_acc*scale(card_sort_c, scale = F) +
+                 speaker*card_sort_c+ speaker*list_sort_c + 
+                 rep_acc*list_sort_c + rep_acc*card_sort_c +
                  (trial_c|subject) + (trial_c|code), data = ple)
 sjPlot::tab_model(m17,
                   dv.labels = "Perceived Listening Effort")
@@ -935,6 +956,14 @@ performance::test_performance(m17, m22)
 
 sjPlot::tab_model(m17,
                   dv.labels = "Perceived Listening Effort")
+
+```
+
+
+```{r}
+
+ggeffects::ggpredict(m17, terms = c("list_sort_c", "speaker", "rep_acc")) |> 
+  plot()
 
 ```
 
