@@ -17,7 +17,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 The purpose of this document is to share the analysis code and report the results for the manuscript. The full Rmd version of the document can be found on the project's Github repository or OSF project page. The data cleaning code for the pupil and perceived listening effort ratings can be found in the Github repo. Analyses were conducted using R version 4.4.1.
 
-```{r}
+```{r, warning = F, message = F}
 
 # Loading in the needed packages
 
@@ -80,7 +80,7 @@ phrase_acc <- rio::import("Cleaned Data/repetition_accuracy.csv") |>
 
 The listeners used in this study are the same from the parent study. In brief, the demographic information from these listeners are below. A total of 34 young adult listeners participated in the experiment.
 
-```{r}
+```{r, warning = F, message = F}
 
 demo_table <- demo |>
   dplyr::select(age, gender, ethnicity, race, native_lang) |>
@@ -108,9 +108,11 @@ demo_table |>
 
 ## Listener Cognition
 
+### Distribution of Cognitive Scores
+
 The information below reports the mean age-corrected standardized scores on the subtests from the NIH Toolbox cognition battery (working memory, inhibitory control, cognitive flexibility, and processing speed). 
 
-```{r}
+```{r, warning = F, message = F}
 
 cog_table <- cog |>
   dplyr::select(-subject) |>
@@ -131,11 +133,10 @@ cog_table |>
 
 ```
 
-
-```{r}
+```{r, warning = F, message = F}
 
 # Color Palette for Figures
-my_pal <- c("#033F63", "#2CB5AE", "#28666E", "#4BAA9B", "#49E9B9", "#57A773")
+my_pal <- c("#25CED1", "#0D3B66", "#F75C03", "#3B5249", "#F1C40F", "#D90368")
 
 cog |>
   dplyr::select(subject, ends_with("_c")) |>
@@ -160,9 +161,12 @@ cog |>
   theme_classic() +
   theme(legend.position = "none")
 
-```
+ggsave("Figures\\cog_distribution.png", plot = last_plot())
 
-```{r}
+```
+### Correlation Among Cognitive Subtests
+
+```{r, warning = F, message = F}
 
 cog |>
   dplyr::select(ends_with("_c")) |>
@@ -179,22 +183,24 @@ cog |>
     legend.title = "Correlation"
   )
 
+ggsave("Figures\\cog_correlation.png", plot = last_plot())
+
 ```
 
 
 
-```{r}
+```{r, echo = F}
 
 # Removing unneeded items
 
-rm(cog_table, demo_table, demo)
+rm(cog_table, demo)
 
 ```
 
 
 # Pupil Dilation
 
-```{r}
+```{r, warning = F, message = F}
 
 # Selecting needed variables from phrase repetition accuracy df
 
@@ -218,7 +224,7 @@ pupil <- pupil |>
 
 Final Model from parent study. This is just modeling pupil dilation changing by levels of condition (interaction between speaker and phrase repetition accuracy).
 
-```{r}
+```{r, warning = F, message = F}
 
 pupil <- pupil |>
   dplyr::mutate(speaker = factor(speaker, levels = c("Control", "ALS")),
@@ -268,34 +274,29 @@ m0_predicted_values |>
   aes(x = time_norm,
       y = fit,
       color = speaker,
+      linetype = rep_acc,
       fill = speaker) +
-  geom_ribbon(aes(ymin = ul, ymax = ll), alpha = .5, color = NA) +
-  geom_line() +
+  geom_line(size = .8) +
   geom_vline(xintercept = 0, size = 0.35) +
   geom_vline(xintercept = 1910, linetype = 2) +
   annotate("rect", xmin = 500, xmax = 2910, ymin = 0, ymax = 200, alpha = 0.15) +
   coord_cartesian(ylim = c(-10, 250), xlim = c(0, 4910)) +
-  facet_wrap("rep_acc") +
   theme_bw() +
   theme(aspect.ratio = 1,
         legend.position = "bottom") +
   labs(x = "Normalized Time (ms)",
        y = "Pupil Dilation (Arbitrary Units)",
        color = "Speaker",
-       fill = "Speaker",
-       linetype = "Speaker") +
-  scale_color_manual(values = c(my_pal[1], my_pal[5]), labels = c("Neurotypical", "ALS")) +
-  scale_fill_manual(values = c(my_pal[1], my_pal[5]), labels = c("Neurotypical", "ALS"))
+       linetype = "Repetition Accuracy") +
+  scale_color_manual(values = c(my_pal[1], my_pal[2]), labels = c("Neurotypical", "ALS"))
 
 ```
-
-
 
 ## Working Memory
 
 Now, to test whether pupil dilation is impacted by working memory capacity, a smooth was added to this model: the age-corrected standardized working memory scores from the NIH Toolbox Cognition battery. The smooth was added per level of "condition" (interaction between speaker and repetition accuracy).
 
-```{r}
+```{r, warning = F, message = F}
 
 wm_pupil <- bam(normed_pupil ~ condition +
                   s(time_norm, by = condition, k = 25) +
@@ -315,14 +316,13 @@ wm_prediction <- plot_smooth(wm_pupil,
             plot_all = "condition",
             rug = F, se = 1, rm.ranef = T)
 
-
 ```
 
 #### Model Check
 
 Checking model assumptions by plotting residuals and autocorrelation plots. Overall, the plots indicate the model is a good fit to the data.
 
-```{r}
+```{r, warning = F, message = F}
 
 gam.check(wm_pupil)
 
@@ -332,14 +332,16 @@ acf_resid(wm_pupil)
 
 #### Model Comparison
 
-```{r}
+```{r, warning = F, message = F}
 
 compareML(m0_pupil, wm_pupil, signif.stars = T, suggest.report = T)
 
 ```
 ### Working Memory vs Pupil Dilation
 
-```{r}
+Overall, the plot is showing that as working memory increases, so does pupil dilaiton. However, there are some interesting trends in the data.
+
+```{r, message = F, warning = F}
 
 wm_predicted_values <- wm_prediction[[1]][c("condition", "list_sort_c", "fit", "ul", "ll")] |>
   dplyr::mutate(rep_acc = ifelse(grepl("inaccurate", condition, ignore.case = T), "inaccurate", "accurate"),
@@ -350,27 +352,23 @@ wm_predicted_values |>
   ggplot() +
   aes(x = list_sort_c,
       y = fit,
-      color = rep_acc,
-      fill = rep_acc) +
-  geom_ribbon(aes(ymin = ul, ymax = ll), alpha = .5, color = NA) +
-  geom_line() +
-  facet_wrap("speaker") +
+      color = speaker,
+      linetype = rep_acc) +
+  geom_line(size = .8) +
   theme_bw() +
   theme(aspect.ratio = 1,
         legend.position = "bottom") +
   labs(x = "Working Memory",
        y = "Pupil Dilation (Arbitrary Units)",
-       color = "Repetition Accuracy",
-       fill = "Repetition Accuracy",
+       color = "Speaker",
        linetype = "Repetition Accuracy") +
-  scale_color_manual(values = c(my_pal[1], my_pal[2])) +
-  scale_fill_manual(values = c(my_pal[1], my_pal[2]))
+  scale_color_manual(values = c(my_pal[1], my_pal[2]))
 
 ```
 
 ## Inhibitory Control
 
-```{r}
+```{r, warning = F, message = F}
 
 inhib_pupil <- bam(normed_pupil ~ condition +
                   s(time_norm, by = condition, k = 25) +
@@ -395,7 +393,7 @@ inhib_prediction <- plot_smooth(inhib_pupil,
 
 #### Model Check
 
-```{r}
+```{r, warning = F, message = F}
 
 
 gam.check(inhib_pupil)
@@ -407,7 +405,7 @@ acf_resid(inhib_pupil)
 
 #### Model Comparison
 
-```{r}
+```{r, warning = F, message = F}
 
 compareML(m0_pupil, inhib_pupil, signif.stars = T, suggest.report = T)
 
@@ -415,7 +413,9 @@ compareML(m0_pupil, inhib_pupil, signif.stars = T, suggest.report = T)
 
 ### Inhibitory Control vs Pupil Dilation
 
-```{r}
+Overall, there seems to be differing trends between the relationship between inhibitory control and pupil dilation depending on the speaker and phrase repetition accuracy. For the accurately recognized phrases from the control speaker, it appears that as inhibitory control increases, pupil dilation also increases. However, for the other three conditions, it seems there is a slight quadratic relationship, where listeners with lower and higher inhibitory control both have larger pupil dilation, but listeners with inhibitory scores around 70-85 (i.e., 1-2 SD below average standardized score 100), have the lowest pupil dilation.
+
+```{r, warning = F, message = F}
 
 inhib_predicted_values <- inhib_prediction[[1]][c("condition", "flanker_c", "fit", "ul", "ll")] |>
   dplyr::mutate(rep_acc = ifelse(grepl("inaccurate", condition, ignore.case = T), "inaccurate", "accurate"),
@@ -426,27 +426,22 @@ inhib_predicted_values |>
   ggplot() +
   aes(x = flanker_c,
       y = fit,
-      color = rep_acc,
-      fill = rep_acc) +
-  geom_ribbon(aes(ymin = ul, ymax = ll), alpha = .5, color = NA) +
-  geom_line() +
-  facet_wrap("speaker") +
+      color = speaker,
+      linetype = rep_acc) +
+  geom_line(size = .8) +
   theme_bw() +
   theme(aspect.ratio = 1,
         legend.position = "bottom") +
   labs(x = "Inhibitory Control",
        y = "Pupil Dilation (Arbitrary Units)",
-       color = "Repetition Accuracy",
-       fill = "Repetition Accuracy",
+       color = "Speaker",
        linetype = "Repetition Accuracy") +
-  scale_color_manual(values = c(my_pal[1], my_pal[2])) +
-  scale_fill_manual(values = c(my_pal[1], my_pal[2]))
-
+  scale_color_manual(values = c(my_pal[1], my_pal[2]))
 ```
 
 ## Cognitive Flexibility
 
-```{r}
+```{r, warning = F, message = F}
 
 flex_pupil <- bam(normed_pupil ~ condition +
                   s(time_norm, by = condition, k = 25) +
@@ -471,7 +466,7 @@ flex_prediction <- plot_smooth(flex_pupil,
 
 ### Model Check
 
-```{r}
+```{r, warning = F, message = F}
 
 gam.check(flex_pupil)
 
@@ -490,7 +485,9 @@ compareML(m0_pupil, flex_pupil, signif.stars = T, suggest.report = T)
 
 ### Cognitive Flexibility vs Pupil Dilation
 
-```{r}
+General trend is that as cognitive flexibility increases, so does pupil dilation. However, there is likely an effect of phrase repetition accuracy. Pupil dilation is higher for inaccurately recognized phrases (for both speakers, but especially the ALS speaker) for listeners with cognitive flexibility scores over 105.
+
+```{r, warning = F, message = F}
 
 flex_predicted_values <- flex_prediction[[1]][c("condition", "card_sort_c", "fit", "ul", "ll")] |>
   dplyr::mutate(rep_acc = ifelse(grepl("inaccurate", condition, ignore.case = T), "inaccurate", "accurate"),
@@ -501,27 +498,22 @@ flex_predicted_values |>
   ggplot() +
   aes(x = card_sort_c,
       y = fit,
-      color = rep_acc,
-      fill = rep_acc) +
-  geom_ribbon(aes(ymin = ul, ymax = ll), alpha = .5, color = NA) +
-  geom_line() +
-  facet_wrap("speaker") +
+      color = speaker,
+      linetype = rep_acc) +
+  geom_line(size = .8) +
   theme_bw() +
   theme(aspect.ratio = 1,
         legend.position = "bottom") +
   labs(x = "Cognitive Flexibility",
        y = "Pupil Dilation (Arbitrary Units)",
-       color = "Repetition Accuracy",
-       fill = "Repetition Accuracy",
+       color = "Speaker",
        linetype = "Repetition Accuracy") +
-  scale_color_manual(values = c(my_pal[1], my_pal[2])) +
-  scale_fill_manual(values = c(my_pal[1], my_pal[2]))
-
+  scale_color_manual(values = c(my_pal[1], my_pal[2]))
 ```
 
 ## Processing Speed
 
-```{r}
+```{r, warning = F, message = F}
 
 process_pupil <- bam(normed_pupil ~ condition +
                   s(time_norm, by = condition, k = 25) +
@@ -546,7 +538,7 @@ process_prediction <- plot_smooth(process_pupil,
 
 ### Model Check
 
-```{r}
+```{r, warning = F, message = F}
 
 gam.check(process_pupil)
 
@@ -557,7 +549,7 @@ acf_resid(process_pupil)
 
 ### Model Comparison
 
-```{r}
+```{r, warning = F, message = F}
 
 compareML(m0_pupil, process_pupil, signif.stars = T, suggest.report = T)
 
@@ -566,7 +558,9 @@ compareML(m0_pupil, process_pupil, signif.stars = T, suggest.report = T)
 
 ### Processing Speed vs Pupil Dilation
 
-```{r}
+For Processing speed, there is a curvilinear relationship. Listeners with lower and higher processing speed scores tend to have higher pupil dilation, especially for ALS speaker (both accurately and inaccurately recognized phrases), and accurately recognized control phrases.
+
+```{r, warning = F, message = F}
 
 process_predicted_values <- process_prediction[[1]][c("condition", "pattern_c", "fit", "ul", "ll")] |>
   dplyr::mutate(rep_acc = ifelse(grepl("inaccurate", condition, ignore.case = T), "inaccurate", "accurate"),
@@ -577,21 +571,17 @@ process_predicted_values |>
   ggplot() +
   aes(x = pattern_c,
       y = fit,
-      color = rep_acc,
-      fill = rep_acc) +
-  geom_ribbon(aes(ymin = ul, ymax = ll), alpha = .5, color = NA) +
-  geom_line() +
-  facet_wrap("speaker") +
+      color = speaker,
+      linetype = rep_acc) +
+  geom_line(size = .8) +
   theme_bw() +
   theme(aspect.ratio = 1,
         legend.position = "bottom") +
   labs(x = "Processing Speed",
        y = "Pupil Dilation (Arbitrary Units)",
-       color = "Repetition Accuracy",
-       fill = "Repetition Accuracy",
+       color = "Speaker",
        linetype = "Repetition Accuracy") +
-  scale_color_manual(values = c(my_pal[1], my_pal[2])) +
-  scale_fill_manual(values = c(my_pal[1], my_pal[2]))
+  scale_color_manual(values = c(my_pal[1], my_pal[2]))
 
 ```
 
@@ -865,8 +855,8 @@ performance::test_performance(m15, m16)
 ```{r}
 
 m17 <- glmmTMB(effort_rating ~ trial_c + speaker + rep_acc + 
-                 speaker*card_sort_c+ speaker*list_sort_c + 
-                 rep_acc*list_sort_c + rep_acc*card_sort_c +
+                 speaker*scale(card_sort_c, scale = F) + speaker*scale(list_sort_c, scale = F) + 
+                 rep_acc*scale(list_sort_c, scale = F) + rep_acc*scale(card_sort_c, scale = F) +
                  (trial_c|subject) + (trial_c|code), data = ple)
 sjPlot::tab_model(m17,
                   dv.labels = "Perceived Listening Effort")
@@ -952,6 +942,10 @@ performance::test_performance(m17, m22)
 ```
 ## Final Model
 
+The final best-fitting LME model for the PLE data is below. In general, both the interaction between working memory and cognitive flexibility with speaker was significant, indicating that listeners with higher working memory scores generally rated accurately-recognized ALS speaker as more effortful. However, listener with higher cognitive flexibility scores tend to rate accurately-recognized ALS speaker as less effortful.The three-way interaction for both of these cognitive measures with speaker and repetition accuracy was not significant.
+
+These cognitive measures also had a significant interaction with repetition accuracy. Listeners with higher working memory scores tend to rate inaccurately recognized phrases from the control speaker as less effortful. Additionally, listeners with higher cognitive flexibility scores tend to rate inaccurately-recognized phrases for the control speaker as more effortful. As mentioned before, the three way interactions were not significant indicating that the pattern of results for inaccurately recognized ALS phrases was similar. 
+
 ```{r}
 
 sjPlot::tab_model(m17,
@@ -960,10 +954,4 @@ sjPlot::tab_model(m17,
 ```
 
 
-```{r}
-
-ggeffects::ggpredict(m17, terms = c("list_sort_c", "speaker", "rep_acc")) |> 
-  plot()
-
-```
 
