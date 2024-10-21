@@ -1,0 +1,334 @@
+---
+title: "Poster Analysis"
+author: "Micah Hirsch"
+date: "2024-10-21"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Purpose
+
+This document provides the code for the peak pupil dilation analysis for a poster presentation presented at the 2024 Annual Speech Language and Hearing Association Convention.
+
+```{r}
+
+# Loading in the needed packages
+
+library(tidyverse) # install.packages("tidyverse")
+library(rio) # install.packages("rio")
+library(glmmTMB) # install.packages("glmmTMB")
+library(janitor) # install.packages("janitor")
+library(ggpubr) # install.packages("ggpubr")
+library(patchwork) # install.packages("patchwork")
+library(gt) # install.packages("gt")
+library(gtsummary) # install.packages("gtsummary")
+library(ggridges) # install.packages("ggridges")
+library(performance) # install.packages("performance")
+library(sjPlot) # install.packages("sjPlot")
+library(ggcorrplot) # install.packages("ggcorrplot")
+library(see) #install.packages("see")
+
+# Loading in the cog data
+
+cog <- rio::import("Cleaned Data/cleaned_cog_data.csv") 
+
+# Loading in the pupil data
+
+pupil <- rio::import("Cleaned Data/cleaned_pupil_data_normalized.csv") 
+
+# Loading in the phrase accuracy data
+
+phrase_acc <- rio::import("Cleaned Data/repetition_accuracy.csv") |>
+  dplyr::mutate(rep_acc = ifelse(initial_response == "missing data", NA, 
+                                 ifelse(target_number == correct_words_initial, "accurate", "inaccurate")),
+                rep_acc_rel = ifelse(rel_response == "missing data", NA, 
+                                 ifelse(target_number == correct_words_rel, "accurate", "inaccurate"))) |>
+  dplyr::select(subject, trial, rep_acc)
+
+
+```
+
+# Peak Pupil Dilation
+
+```{r}
+
+peak_pupil_df <-pupil |>
+  dplyr::group_by(subject, trial, speaker, code) |>
+  dplyr::summarize(peak_pupil = max(normed_pupil)) |>
+  dplyr::ungroup() |>
+  dplyr::left_join(phrase_acc, by = c("subject", "trial")) |>
+  dplyr::left_join(cog, by = "subject") |>
+  dplyr::mutate(trial_c = trial - 6,
+                speaker = factor(speaker, levels = c("Control", "ALS")),
+                rep_acc = factor(rep_acc, levels = c("accurate", "inaccurate"))) |>
+  dplyr::filter(!is.na(rep_acc))
+
+```
+## Visualization
+
+```{r}
+
+# Color Palette for Figures
+my_pal <- c("#25CED1", "#0D3B66", "#F75C03", "#3B5249", "#F1C40F", "#D90368")
+
+peak_pupil_df |>
+  dplyr::select(subject, trial, speaker, peak_pupil, rep_acc, ends_with("_c")) |>
+  dplyr::group_by(subject, speaker, rep_acc, list_sort_c, flanker_c, card_sort_c, pattern_c) |>
+  dplyr::summarize(peak_pupil = mean(peak_pupil)) |>
+  dplyr::rename('Working Memory' = list_sort_c,
+                'Inhibitory Control' = flanker_c,
+                'Cognitive Flexibility' = card_sort_c,
+                'Processing Speed' = pattern_c) |>
+  tidyr::pivot_longer(cols = "Working Memory":"Processing Speed",
+                     names_to = "cog_measure",
+                     values_to = "score") |>
+  ungroup() |>
+  ggplot() +
+  aes(x = score,
+      y = peak_pupil,
+      color = speaker,
+      shape = speaker) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "lm") +
+  facet_grid(rep_acc ~ cog_measure) +
+  labs(x = "Score", y = "Peak Pupil Dilation") +
+  theme_classic() +
+  scale_color_manual(values = my_pal) +
+  scale_shape_manual(values = c(1, 2)) +
+  theme(aspect.ratio = 1)
+
+```
+## Models
+
+### Fully Unconditional Model
+
+```{r}
+
+m0 <- glmmTMB(peak_pupil ~ 1 + (1|subject), data = peak_pupil_df)
+sjPlot::tab_model(m0, pred.labels = "Intercept",
+                  dv.labels = "Peak Pupil Dilation")
+
+performance::icc(m0)
+performance::check_model(m0)
+
+```
+
+```{r}
+
+m1 <- glmmTMB(peak_pupil ~ 1 + (trial_c|subject), data = peak_pupil_df)
+sjPlot::tab_model(m1, pred.labels = "Intercept",
+                  dv.labels = "Peak Pupil Dilation")
+performance::test_performance(m0, m1)
+
+```
+
+```{r}
+
+m2 <- glmmTMB(peak_pupil ~ trial_c + speaker + rep_acc + (trial_c|subject), data = peak_pupil_df)
+sjPlot::tab_model(m2, pred.labels = "Intercept",
+                  dv.labels = "Peak Pupil Dilation")
+performance::test_performance(m1, m2)
+
+```
+
+```{r}
+
+m3 <- glmmTMB(peak_pupil ~ trial_c + speaker + rep_acc + scale(list_sort_c, scale = F) + (1|subject), data = peak_pupil_df)
+sjPlot::tab_model(m3, pred.labels = "Intercept",
+                  dv.labels = "Peak Pupil Dilation")
+performance::test_performance(m2, m3)
+
+```
+```{r}
+
+m3b <- glmmTMB(peak_pupil ~ trial_c + speaker + rep_acc + (1|subject), data = peak_pupil_df)
+sjPlot::tab_model(m3b, pred.labels = "Intercept",
+                  dv.labels = "Peak Pupil Dilation")
+performance::test_performance(m3, m3b)
+
+```
+
+```{r}
+
+m4 <- glmmTMB(peak_pupil ~ trial_c + speaker + rep_acc + scale(flanker_c, scale = F) + (1|subject), data = peak_pupil_df)
+sjPlot::tab_model(m4, pred.labels = "Intercept",
+                  dv.labels = "Peak Pupil Dilation")
+performance::test_performance(m3b, m4)
+
+```
+
+```{r}
+
+m5 <- glmmTMB(peak_pupil ~ trial_c + speaker + rep_acc + scale(card_sort_c, scale = F) + (1|subject), data = peak_pupil_df)
+sjPlot::tab_model(m5, pred.labels = "Intercept",
+                  dv.labels = "Peak Pupil Dilation")
+performance::test_performance(m3b, m5)
+
+```
+
+```{r}
+
+m6 <- glmmTMB(peak_pupil ~ trial_c + speaker + rep_acc + scale(pattern_c,scale = F) + (1|subject), data = peak_pupil_df)
+sjPlot::tab_model(m6, pred.labels = "Intercept",
+                  dv.labels = "Peak Pupil Dilation")
+performance::test_performance(m3b, m6)
+
+```
+
+```{r}
+
+m7 <- glmmTMB(peak_pupil ~ trial_c + speaker + rep_acc + 
+                speaker*scale(list_sort_c, scale = F) + (1|subject), data = peak_pupil_df)
+sjPlot::tab_model(m7, pred.labels = "Intercept",
+                  dv.labels = "Peak Pupil Dilation")
+performance::test_performance(m3b, m7)
+
+```
+
+```{r}
+
+m8 <- glmmTMB(peak_pupil ~ trial_c + speaker + rep_acc + 
+                speaker*scale(list_sort_c, scale = F) + speaker*scale(flanker_c, scale = F) + (1|subject), data = peak_pupil_df)
+sjPlot::tab_model(m8, pred.labels = "Intercept",
+                  dv.labels = "Peak Pupil Dilation")
+performance::test_performance(m7, m8)
+
+```
+```{r}
+
+m9 <- glmmTMB(peak_pupil ~ trial_c + speaker + rep_acc + 
+                speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) + (1|subject), data = peak_pupil_df)
+sjPlot::tab_model(m9, pred.labels = "Intercept",
+                  dv.labels = "Peak Pupil Dilation")
+performance::test_performance(m7, m9)
+
+```
+
+```{r}
+
+m10 <- glmmTMB(peak_pupil ~ trial_c + speaker + rep_acc + 
+                speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) + speaker*scale(pattern_c, scale = F) +
+                 (1|subject), data = peak_pupil_df)
+sjPlot::tab_model(m10, pred.labels = "Intercept",
+                  dv.labels = "Peak Pupil Dilation")
+performance::test_performance(m9, m10)
+
+```
+
+```{r}
+
+m11 <- glmmTMB(peak_pupil ~ trial_c + speaker + rep_acc + 
+                 speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) + 
+                 rep_acc*scale(list_sort_c, scale = F) +
+                 (1|subject), data = peak_pupil_df)
+sjPlot::tab_model(m11, pred.labels = "Intercept",
+                  dv.labels = "Peak Pupil Dilation")
+performance::test_performance(m9, m11)
+
+```
+
+```{r}
+
+m12 <- glmmTMB(peak_pupil ~ trial_c + speaker + rep_acc + 
+                 speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) + 
+                 rep_acc*scale(list_sort_c, scale = F) + rep_acc*scale(flanker_c, scale = F) +
+                 (1|subject), data = peak_pupil_df)
+sjPlot::tab_model(m12, pred.labels = "Intercept",
+                  dv.labels = "Peak Pupil Dilation")
+performance::test_performance(m11, m12)
+
+```
+
+```{r}
+
+m13 <- glmmTMB(peak_pupil ~ trial_c + speaker + rep_acc + 
+                 speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) + 
+                 rep_acc*scale(list_sort_c, scale = F) + rep_acc*scale(card_sort_c, scale = F) +
+                 (1|subject), data = peak_pupil_df)
+sjPlot::tab_model(m13, pred.labels = "Intercept",
+                  dv.labels = "Peak Pupil Dilation")
+performance::test_performance(m11, m13)
+
+
+```
+
+```{r}
+
+m14 <- glmmTMB(peak_pupil ~ trial_c + speaker + rep_acc + 
+                 speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) + 
+                 rep_acc*scale(list_sort_c, scale = F) + rep_acc*scale(pattern_c, scale = F) +
+                 (1|subject), data = peak_pupil_df)
+sjPlot::tab_model(m14, pred.labels = "Intercept",
+                  dv.labels = "Peak Pupil Dilation")
+performance::test_performance(m11, m14)
+
+```
+
+```{r}
+
+m15 <- glmmTMB(peak_pupil ~ trial_c + speaker + rep_acc + 
+                 speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) + 
+                 rep_acc*scale(list_sort_c, scale = F) + rep_acc*scale(pattern_c, scale = F) +
+                 speaker*rep_acc*scale(list_sort_c, scale = F) +
+                 (1|subject), data = peak_pupil_df)
+sjPlot::tab_model(m15, pred.labels = "Intercept",
+                  dv.labels = "Peak Pupil Dilation")
+performance::test_performance(m14, m15)
+
+```
+
+```{r}
+
+m16 <- glmmTMB(peak_pupil ~ trial_c + speaker + rep_acc + 
+                 speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) + 
+                 rep_acc*scale(list_sort_c, scale = F) + rep_acc*scale(pattern_c, scale = F) +
+                 speaker*rep_acc*scale(flanker_c, scale = F) +
+                 (1|subject), data = peak_pupil_df)
+sjPlot::tab_model(m16, pred.labels = "Intercept",
+                  dv.labels = "Peak Pupil Dilation")
+performance::test_performance(m14, m16)
+
+
+```
+
+```{r}
+
+m17 <- glmmTMB(peak_pupil ~ trial_c + speaker + rep_acc + 
+                 speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) + 
+                 rep_acc*scale(list_sort_c, scale = F) + rep_acc*scale(pattern_c, scale = F) +
+                 speaker*rep_acc*scale(card_sort_c, scale = F) +
+                 (1|subject), data = peak_pupil_df)
+sjPlot::tab_model(m17, pred.labels = "Intercept",
+                  dv.labels = "Peak Pupil Dilation")
+performance::test_performance(m14, m17)
+
+```
+
+```{r}
+
+m18 <- glmmTMB(peak_pupil ~ trial_c + speaker + rep_acc + 
+                 speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) + 
+                 rep_acc*scale(list_sort_c, scale = F) + rep_acc*scale(pattern_c, scale = F) +
+                 speaker*rep_acc*scale(pattern_c, scale = F) +
+                 (1|subject), data = peak_pupil_df)
+sjPlot::tab_model(m18, pred.labels = "Intercept",
+                  dv.labels = "Peak Pupil Dilation")
+performance::test_performance(m14, m18)
+
+```
+
+```{r}
+
+m14b <- glmmTMB(peak_pupil ~ trial_c + speaker + rep_acc + 
+                  speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) + 
+                  rep_acc*scale(pattern_c, scale = F) +
+                  (1|subject), data = peak_pupil_df)
+sjPlot::tab_model(m14b, pred.labels = "Intercept",
+                  dv.labels = "Peak Pupil Dilation")
+performance::check_model(m14b)
+
+```
+
