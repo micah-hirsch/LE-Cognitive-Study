@@ -11,9 +11,17 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Purpose
 
-This document provides the code for the peak pupil dilation analysis for a poster presentation presented at the 2024 Annual Speech Language and Hearing Association Convention.
+This document provides the code for the peak pupil dilation  and perceived listening effort analyses for a poster presentation presented at the 2024 Annual Speech Language and Hearing Association Convention. The presentation information is below:
 
-```{r}
+-   **Title:** The Relationship Between Listener Cognition and Listening Effort During Dysarthric Speech Perception
+
+-   **Authors:** Samantha Bikulcius, Micah Hirsch, Stephanie Borrie, Yunjung Kim, Tyson Barrett, and Kaitlin Lansford
+
+-   **Location:** Seattle, WA
+
+-   **Date:** Saturday, Dec 7 10:00 AM
+
+```{r, warning = F, message = F}
 
 # Loading in the needed packages
 
@@ -51,9 +59,10 @@ phrase_acc <- rio::import("Cleaned Data/repetition_accuracy.csv") |>
 
 ```
 
+
 # Peak Pupil Dilation
 
-```{r}
+```{r, warning = F, message = F}
 
 peak_pupil_df <-pupil |>
   dplyr::group_by(subject, trial, speaker, code) |>
@@ -67,9 +76,10 @@ peak_pupil_df <-pupil |>
   dplyr::filter(!is.na(rep_acc))
 
 ```
+
 ## Visualization
 
-```{r}
+```{r, warning = F, message = F}
 
 # Color Palette for Figures
 my_pal <- c("#25CED1", "#0D3B66", "#F75C03", "#3B5249", "#F1C40F", "#D90368")
@@ -93,14 +103,19 @@ peak_pupil_df |>
       shape = speaker) +
   geom_point(alpha = 0.6) +
   geom_smooth(method = "lm") +
-  facet_grid(rep_acc ~ cog_measure) +
+  facet_grid(cog_measure ~ rep_acc) +
   labs(x = "Score", y = "Peak Pupil Dilation") +
   theme_classic() +
   scale_color_manual(values = my_pal) +
   scale_shape_manual(values = c(1, 2)) +
-  theme(aspect.ratio = 1)
+  theme(aspect.ratio = 1,
+        panel.spacing.x = unit(.8, "lines"),
+        legend.position = "bottom")
+
+ggsave("Figures/peak_pupil_plot.png", plot = last_plot(), width = 3, height = 6, units = "in", scale = 1.2)
 
 ```
+
 ## Models
 
 ### Fully Unconditional Model
@@ -116,6 +131,8 @@ performance::check_model(m0)
 
 ```
 
+### Model 1
+
 ```{r}
 
 m1 <- glmmTMB(peak_pupil ~ 1 + (trial_c|subject), data = peak_pupil_df)
@@ -125,62 +142,77 @@ performance::test_performance(m0, m1)
 
 ```
 
+### Model 2
+
 ```{r}
 
-m2 <- glmmTMB(peak_pupil ~ trial_c + speaker + rep_acc + (trial_c|subject), data = peak_pupil_df)
+m2 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc + (trial_c|subject), data = peak_pupil_df)
 sjPlot::tab_model(m2, pred.labels = "Intercept",
                   dv.labels = "Peak Pupil Dilation")
 performance::test_performance(m1, m2)
 
 ```
 
+### Model 3
+
 ```{r}
 
-m3 <- glmmTMB(peak_pupil ~ trial_c + speaker + rep_acc + scale(list_sort_c, scale = F) + (1|subject), data = peak_pupil_df)
+m3 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc + scale(list_sort_c, scale = F) + (1|subject), data = peak_pupil_df)
 sjPlot::tab_model(m3, pred.labels = "Intercept",
                   dv.labels = "Peak Pupil Dilation")
 performance::test_performance(m2, m3)
 
 ```
+
+### Model 3b
+
 ```{r}
 
-m3b <- glmmTMB(peak_pupil ~ trial_c + speaker + rep_acc + (1|subject), data = peak_pupil_df)
+m3b <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc + (1|subject), data = peak_pupil_df)
 sjPlot::tab_model(m3b, pred.labels = "Intercept",
                   dv.labels = "Peak Pupil Dilation")
 performance::test_performance(m3, m3b)
 
 ```
 
+### Model 4
+
 ```{r}
 
-m4 <- glmmTMB(peak_pupil ~ trial_c + speaker + rep_acc + scale(flanker_c, scale = F) + (1|subject), data = peak_pupil_df)
+m4 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc + scale(flanker_c, scale = F) + (1|subject), data = peak_pupil_df)
 sjPlot::tab_model(m4, pred.labels = "Intercept",
                   dv.labels = "Peak Pupil Dilation")
 performance::test_performance(m3b, m4)
 
 ```
 
+### Model 5
+
 ```{r}
 
-m5 <- glmmTMB(peak_pupil ~ trial_c + speaker + rep_acc + scale(card_sort_c, scale = F) + (1|subject), data = peak_pupil_df)
+m5 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc + scale(card_sort_c, scale = F) + (1|subject), data = peak_pupil_df)
 sjPlot::tab_model(m5, pred.labels = "Intercept",
                   dv.labels = "Peak Pupil Dilation")
 performance::test_performance(m3b, m5)
 
 ```
 
+### Model 6
+
 ```{r}
 
-m6 <- glmmTMB(peak_pupil ~ trial_c + speaker + rep_acc + scale(pattern_c,scale = F) + (1|subject), data = peak_pupil_df)
+m6 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc + scale(pattern_c,scale = F) + (1|subject), data = peak_pupil_df)
 sjPlot::tab_model(m6, pred.labels = "Intercept",
                   dv.labels = "Peak Pupil Dilation")
 performance::test_performance(m3b, m6)
 
 ```
 
+### Model 7
+
 ```{r}
 
-m7 <- glmmTMB(peak_pupil ~ trial_c + speaker + rep_acc + 
+m7 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc + 
                 speaker*scale(list_sort_c, scale = F) + (1|subject), data = peak_pupil_df)
 sjPlot::tab_model(m7, pred.labels = "Intercept",
                   dv.labels = "Peak Pupil Dilation")
@@ -188,18 +220,23 @@ performance::test_performance(m3b, m7)
 
 ```
 
+### Model 8
+
 ```{r}
 
-m8 <- glmmTMB(peak_pupil ~ trial_c + speaker + rep_acc + 
+m8 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc + 
                 speaker*scale(list_sort_c, scale = F) + speaker*scale(flanker_c, scale = F) + (1|subject), data = peak_pupil_df)
 sjPlot::tab_model(m8, pred.labels = "Intercept",
                   dv.labels = "Peak Pupil Dilation")
 performance::test_performance(m7, m8)
 
 ```
+
+### Model 9
+
 ```{r}
 
-m9 <- glmmTMB(peak_pupil ~ trial_c + speaker + rep_acc + 
+m9 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc + 
                 speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) + (1|subject), data = peak_pupil_df)
 sjPlot::tab_model(m9, pred.labels = "Intercept",
                   dv.labels = "Peak Pupil Dilation")
@@ -207,9 +244,11 @@ performance::test_performance(m7, m9)
 
 ```
 
+### Model 10
+
 ```{r}
 
-m10 <- glmmTMB(peak_pupil ~ trial_c + speaker + rep_acc + 
+m10 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc + 
                 speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) + speaker*scale(pattern_c, scale = F) +
                  (1|subject), data = peak_pupil_df)
 sjPlot::tab_model(m10, pred.labels = "Intercept",
@@ -218,9 +257,11 @@ performance::test_performance(m9, m10)
 
 ```
 
+### Model 11
+
 ```{r}
 
-m11 <- glmmTMB(peak_pupil ~ trial_c + speaker + rep_acc + 
+m11 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc + 
                  speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) + 
                  rep_acc*scale(list_sort_c, scale = F) +
                  (1|subject), data = peak_pupil_df)
@@ -230,9 +271,11 @@ performance::test_performance(m9, m11)
 
 ```
 
+### Model 12
+
 ```{r}
 
-m12 <- glmmTMB(peak_pupil ~ trial_c + speaker + rep_acc + 
+m12 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc + 
                  speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) + 
                  rep_acc*scale(list_sort_c, scale = F) + rep_acc*scale(flanker_c, scale = F) +
                  (1|subject), data = peak_pupil_df)
@@ -242,9 +285,11 @@ performance::test_performance(m11, m12)
 
 ```
 
+### Model 13
+
 ```{r}
 
-m13 <- glmmTMB(peak_pupil ~ trial_c + speaker + rep_acc + 
+m13 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc + 
                  speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) + 
                  rep_acc*scale(list_sort_c, scale = F) + rep_acc*scale(card_sort_c, scale = F) +
                  (1|subject), data = peak_pupil_df)
@@ -255,9 +300,11 @@ performance::test_performance(m11, m13)
 
 ```
 
+### Model 14
+
 ```{r}
 
-m14 <- glmmTMB(peak_pupil ~ trial_c + speaker + rep_acc + 
+m14 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc + 
                  speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) + 
                  rep_acc*scale(list_sort_c, scale = F) + rep_acc*scale(pattern_c, scale = F) +
                  (1|subject), data = peak_pupil_df)
@@ -267,9 +314,11 @@ performance::test_performance(m11, m14)
 
 ```
 
+### Model 15
+
 ```{r}
 
-m15 <- glmmTMB(peak_pupil ~ trial_c + speaker + rep_acc + 
+m15 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc + 
                  speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) + 
                  rep_acc*scale(list_sort_c, scale = F) + rep_acc*scale(pattern_c, scale = F) +
                  speaker*rep_acc*scale(list_sort_c, scale = F) +
@@ -280,9 +329,12 @@ performance::test_performance(m14, m15)
 
 ```
 
+
+### Model 16
+
 ```{r}
 
-m16 <- glmmTMB(peak_pupil ~ trial_c + speaker + rep_acc + 
+m16 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc + 
                  speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) + 
                  rep_acc*scale(list_sort_c, scale = F) + rep_acc*scale(pattern_c, scale = F) +
                  speaker*rep_acc*scale(flanker_c, scale = F) +
@@ -294,9 +346,11 @@ performance::test_performance(m14, m16)
 
 ```
 
+### Model 17
+
 ```{r}
 
-m17 <- glmmTMB(peak_pupil ~ trial_c + speaker + rep_acc + 
+m17 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc + 
                  speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) + 
                  rep_acc*scale(list_sort_c, scale = F) + rep_acc*scale(pattern_c, scale = F) +
                  speaker*rep_acc*scale(card_sort_c, scale = F) +
@@ -307,9 +361,11 @@ performance::test_performance(m14, m17)
 
 ```
 
+### Model 18
+
 ```{r}
 
-m18 <- glmmTMB(peak_pupil ~ trial_c + speaker + rep_acc + 
+m18 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc + 
                  speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) + 
                  rep_acc*scale(list_sort_c, scale = F) + rep_acc*scale(pattern_c, scale = F) +
                  speaker*rep_acc*scale(pattern_c, scale = F) +
@@ -320,9 +376,11 @@ performance::test_performance(m14, m18)
 
 ```
 
+### Best-Fitting Final Model
+
 ```{r}
 
-m14b <- glmmTMB(peak_pupil ~ trial_c + speaker + rep_acc + 
+m14b <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc + 
                   speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) + 
                   rep_acc*scale(pattern_c, scale = F) +
                   (1|subject), data = peak_pupil_df)
@@ -331,4 +389,79 @@ sjPlot::tab_model(m14b, pred.labels = "Intercept",
 performance::check_model(m14b)
 
 ```
+
+# Perceived Listening Effort 
+
+## Visualizations
+
+
+```{r}
+
+# Merge PLE data with rep acc and listener cog
+
+ple <- ple |>
+  dplyr::left_join(acc, by = c("subject", "trial")) |>
+  dplyr::filter(!is.na(rep_acc)) |>
+  dplyr::left_join(cog, by = "subject") |>
+  dplyr::filter(effort_rating > 0) |>
+  dplyr::filter(effort_rating <= 7) |>
+  dplyr::mutate(trial_c = trial - 6,
+                speaker = factor(speaker, levels = c("Control", "ALS")))
+
+ple |>
+  dplyr::select(subject, trial, speaker, code, effort_rating, rep_acc, ends_with("_c")) |>
+  dplyr::group_by(subject, speaker, rep_acc, list_sort_c, flanker_c, card_sort_c, pattern_c) |>
+  dplyr::summarize(effort = mean(effort_rating)) |>
+  dplyr::rename('Working Memory' = list_sort_c,
+                'Inhibitory Control' = flanker_c,
+                'Cognitive Flexibility' = card_sort_c,
+                'Processing Speed' = pattern_c) |>
+  tidyr::pivot_longer(cols = "Working Memory":"Processing Speed",
+                     names_to = "cog_measure",
+                     values_to = "score") |>
+  ungroup() |>
+  ggplot() +
+  aes(x = score,
+      y = effort,
+      color = speaker,
+      shape = speaker) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "lm") +
+  facet_grid(rep_acc ~ cog_measure) +
+  labs(x = "Score", y = "Perceived Listening Effort Rating") +
+  theme_classic() +
+  scale_color_manual(values = my_pal) +
+  scale_shape_manual(values = c(1, 2)) +
+  theme(aspect.ratio = 1)
+
+```
+
+## Models
+
+### Fully Unconditional Model
+
+```{r, warning = F, message = F}
+
+m0 <- glmmTMB(effort_rating ~ 1 + (1|subject) + (1|code), data = ple)
+sjPlot::tab_model(m0, pred.labels = "Intercept",
+                  dv.labels = "Perceived Listening Effort")
+
+performance::icc(m0)
+
+```
+
+
+### Model 1
+
+In this step, we are adding trial order (trial_c) as a random slop for both the listener (subject) and phrase (code) random intercepts. The random intercept of trial order significantly improved model fit.
+
+```{r, warning = F, message = F}
+
+m1<- glmmTMB(effort_rating ~ 1 + (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m1, pred.labels = "Intercept",
+                  dv.labels = "Perceived Listening Effort")
+performance::test_performance(m0, m1)
+
+```
+
 
