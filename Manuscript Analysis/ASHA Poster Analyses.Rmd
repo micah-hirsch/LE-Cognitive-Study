@@ -2,7 +2,11 @@
 title: "Poster Analysis"
 author: "Micah Hirsch"
 date: "2024-10-21"
-output: html_document
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
 ---
 
 ```{r setup, include=FALSE}
@@ -478,7 +482,7 @@ performance::test_performance(m14, m14b)
 
 ### Best Fitting Final Model
 
-This is the best fitting model for the pupil dilation data. In regards to the cognitive data, here are the key take-aways:
+This is the best fitting model for the pupil dilation data. Model assumptions were also visually checked using the performance package. In regards to the cognitive data, here are the key take-aways:
 
 - Interaction between Working Memory and Speaker: On average, when listening to the ALS speaker, listeners with higher working memory scores had greater peak pupil dilation.
 - Interaction between Cognitive Flexibility and Speaker: On average, when listening to the ALS speaker, listeners with greater cognitive flexibility scores had larger peak pupil dilation values.
@@ -547,8 +551,8 @@ ple |>
   facet_grid(cog_measure ~ rep_acc) +
   labs(x = "Score", y = "Perceived Listening Effort Rating") +
   theme_classic() +
-  scale_color_manual(values = my_pal) +
-  scale_shape_manual(values = c(1, 2)) +
+  scale_color_manual(values = my_pal, labels = c("Neurotypical", "ALS")) +
+  scale_shape_manual(values = c(1, 2), labels = c("Neurotypical", "ALS")) +
   theme(aspect.ratio = 1,
         panel.spacing.x = unit(.8, "lines"),
         legend.position = "bottom")
@@ -564,10 +568,11 @@ ggsave("Figures/ple_plot.png", plot = last_plot(), width = 3, height = 6, units 
 ```{r, warning = F, message = F}
 
 m0 <- glmmTMB(effort_rating ~ 1 + (1|subject) + (1|code), data = ple)
-sjPlot::tab_model(m0, pred.labels = "Intercept",
+sjPlot::tab_model(m0, 
+                  pred.labels = "Intercept",
                   dv.labels = "Perceived Listening Effort")
-
 performance::icc(m0)
+performance::check_model(m0)
 
 ```
 
@@ -585,4 +590,363 @@ performance::test_performance(m0, m1)
 
 ```
 
+### Model 2
+
+```{r, warning = F, message = F}
+
+m2 <- glmmTMB(effort_rating ~ trial_c + speaker*rep_acc + (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m2,
+                  pred.labels = c("Intercept", "Trial Number", "Speaker [ALS]",
+                                  "Repetition Accuracy [Inaccurate]", "Speaker * Repetition Accuracy"),
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m1, m2)
+
+```
+
+### Model 3
+
+```{r, warning = F, message = F}
+
+m3 <- glmmTMB(effort_rating ~ trial_c + speaker*rep_acc + scale(list_sort_c, scale = F) +(trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m3,
+                  pred.labels = c("Intercept", "Trial Number", "Speaker [ALS]",
+                                  "Repetition Accuracy [Inaccurate]", "Working Memory",
+                                  "Speaker * Repetition Accuracy"),
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m2, m3)
+
+```
+
+### Model 4
+
+```{r, warning = F, message = F}
+
+m4 <- glmmTMB(effort_rating ~ trial_c + speaker*rep_acc + scale(flanker_c, scale = F) +(trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m4,
+                  pred.labels = c("Intercept", "Trial Number", "Speaker [ALS]",
+                                  "Repetition Accuracy [Inaccurate]", "Inhibitory Control",
+                                  "Speaker * Repetition Accuracy"),
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m2, m4)
+
+```
+
+### Model 5
+
+```{r, warning = F, message = F}
+
+m5 <- glmmTMB(effort_rating ~ trial_c + speaker*rep_acc + scale(card_sort_c, scale = F) +(trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m5,
+                  pred.labels = c("Intercept", "Trial Number", "Spekaer [ALS]",
+                                  "Repetition Accuracy [Inaccurate]", "Cognitive Flexibility",
+                                  "Speaker * Repetition Accuracy"),
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m2, m5)
+
+```
+
+### Model 6
+
+```{r, warning = F, message = F}
+
+m6 <- glmmTMB(effort_rating ~ trial_c + speaker*rep_acc + scale(pattern_c, scale = F) +(trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m6,
+                  pred.labels = c("Intercept", "Trial Number", "Spekaer [ALS]",
+                                  "Repetition Accuracy [Inaccurate]", "Processing Speed",
+                                  "Speaker * Repetition Accuracy"),
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m2, m6)
+
+
+```
+
+### Model 7
+
+```{r}
+
+m7 <- glmmTMB(effort_rating ~ trial_c + speaker*rep_acc + 
+                speaker*scale(list_sort_c, scale = F) + (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m7,
+                  pred.labels = c("Intercept", "Trial Number", "Spekaer [ALS]",
+                                  "Repetition Accuracy [Inaccurate]", "Working Memory",
+                                  "Speaker * Repetition Accuracy",
+                                  "Working Memory * Speaker [ALS]"),
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m2, m7)
+
+```
+
+### Model 8
+
+```{r, warning = F, message = F}
+
+m8 <- glmmTMB(effort_rating ~ trial_c + speaker*rep_acc + 
+                speaker*scale(list_sort_c, scale = F) + speaker*scale(flanker_c, scale = F) + 
+                (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m8,
+                  pred.labels = c("Intercept", "Trial Number", "Spekaer [ALS]",
+                                  "Repetition Accuracy [Inaccurate]", "Working Memory", "Inhibitory Control",
+                                  "Speaker * Repetition Accuracy",
+                                  "Working Memory * Speaker [ALS]", "Inhibitory Control * Speaker [ALS]"),
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m7, m8)
+
+```
+### Model 9
+
+```{r, warning = F, message = F}
+
+m9 <- glmmTMB(effort_rating ~ trial_c + speaker*rep_acc + 
+                speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) + 
+                (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m9,
+                  pred.labels = c("Intercept", "Trial Number", "Spekaer [ALS]",
+                                  "Repetition Accuracy [Inaccurate]", "Working Memory", "Cognitive Flexibility",
+                                  "Speaker * Repetition Accuracy",
+                                  "Working Memory * Speaker [ALS]", "Cognitive Flexibility * Speaker [ALS]"),
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m7, m9)
+
+```
+
+### Model 10
+
+```{r, warning = F, message = F}
+
+m10 <- glmmTMB(effort_rating ~ trial_c + speaker*rep_acc + 
+                speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) + 
+                 speaker*scale(pattern_c, scale = F) +
+                (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m10, 
+                  pred.labels = c("Intercept", "Trial Number", "Speaker [ALS]",
+                                  "Repetition Accuracy [Inaccurate]", "Working Memory", "Cognitive Flexibility",
+                                  "Processing Speed",
+                                  "Speaker * Repetition Accuracy",
+                                  "Working Memory * Speaker [ALS]", "Cognitive Flexibility * Speaker [ALS]"),
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m9, m10)
+
+```
+### Model 11
+
+```{r, warning = F, message = F}
+
+m11 <- glmmTMB(effort_rating ~ trial_c + speaker*rep_acc + 
+                 speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) +
+                 rep_acc*scale(list_sort_c, scale = F) +
+                (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m11, 
+                  pred.labels = c("Intercept", "Trial Number", "Speaker [ALS]",
+                                  "Repetition Accuracy [Inaccurate]", "Working Memory", "Cognitive Flexibility",
+                                  "Speaker * Repetition Accuracy",
+                                  "Working Memory * Speaker [ALS]", "Cognitive Flexibility * Speaker [ALS]", 
+                                  "Working Memory * Repetition Accuracy [Inaccurate]"),
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m9, m11)
+
+```
+
+### Model 12
+
+```{r, warning = F, message = F}
+
+m12 <- glmmTMB(effort_rating ~ trial_c + speaker*rep_acc + 
+                 speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) +
+                 rep_acc*scale(list_sort_c, scale = F) + rep_acc*scale(flanker_c, scale = F) +
+                (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m12, 
+                  pred.labels = c("Intercept", "Trial Number", "Speaker [ALS]",
+                                  "Repetition Accuracy [Inaccurate]", "Working Memory", "Cognitive Flexibility",
+                                  "Inhibitory Control", "Speaker * Repetition Accuracy",
+                                  "Working Memory * Speaker [ALS]", "Cognitive Flexibility * Speaker [ALS]", 
+                                  "Working Memory * Repetition Accuracy [Inaccurate]",
+                                  "Inhibitory Control * Repetition Accuracy [Inaccurate]"),
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m11, m12)
+
+```
+
+### Model 13
+
+```{r, warning = F, message = F}
+
+m13 <- glmmTMB(effort_rating ~ trial_c + speaker*rep_acc + 
+                 speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) +
+                 rep_acc*scale(list_sort_c, scale = F) + rep_acc*scale(card_sort_c, scale = F) +
+                (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m13, 
+                  pred.labels = c("Intercept", "Trial Number", "Speaker [ALS]",
+                                  "Repetition Accuracy [Inaccurate]", "Working Memory", "Cognitive Flexibility",
+                                  "Speaker * Repetition Accuracy",
+                                  "Working Memory * Speaker [ALS]", "Cognitive Flexibility * Speaker [ALS]", 
+                                  "Working Memory * Repetition Accuracy [Inaccurate]",
+                                  "Cognitive Flexibility * Repetition Accuracy [Inaccurate]"),
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m11, m13)
+
+```
+### Model 14
+
+```{r, warning = F, message = F}
+
+m14 <- glmmTMB(effort_rating ~ trial_c + speaker*rep_acc + 
+                 speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) +
+                 rep_acc*scale(list_sort_c, scale = F) + rep_acc*scale(card_sort_c, scale = F) +
+                 rep_acc*scale(pattern_c, scale = F) +
+                (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m14, 
+                  pred.labels = c("Intercept", "Trial Number", "Speaker [ALS]",
+                                  "Repetition Accuracy [Inaccurate]", "Working Memory", "Cognitive Flexibility",
+                                  "Processing Speed", "Speaker * Repetition Accuracy",
+                                  "Working Memory * Speaker [ALS]", "Cognitive Flexibility * Speaker [ALS]", 
+                                  "Working Memory * Repetition Accuracy [Inaccurate]",
+                                  "Cognitive Flexibility * Repetition Accuracy [Inaccurate]",
+                                  "Processing Speed * Repetition Accuracy [Inaccurate]"),
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m13, m14)
+
+```
+
+### Model 15
+
+```{r, warning = F, message = F}
+
+m15 <- glmmTMB(effort_rating ~ trial_c + speaker*rep_acc + 
+                 speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) +
+                 rep_acc*scale(list_sort_c, scale = F) + rep_acc*scale(card_sort_c, scale = F) +
+                 speaker*rep_acc*scale(list_sort_c, scale = F) +
+                (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m15, 
+                  pred.labels = c("Intercept", "Trial Number", "Speaker [ALS]",
+                                  "Repetition Accuracy [Inaccurate]", "Working Memory", "Cognitive Flexibility", 
+                                  "Speaker * Repetition Accuracy",
+                                  "Working Memory * Speaker [ALS]", "Cognitive Flexibility * Speaker [ALS]", 
+                                  "Working Memory * Repetition Accuracy [Inaccurate]",
+                                  "Cognitive Flexibility * Repetition Accuracy [Inaccurate]",
+                                  "Working Memory * Speaker * Accuracy"),
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m13, m15)
+
+```
+
+### Model 16
+
+```{r, warning = F, message = F}
+
+m16 <- glmmTMB(effort_rating ~ trial_c + speaker*rep_acc + 
+                 speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) +
+                 rep_acc*scale(list_sort_c, scale = F) + rep_acc*scale(card_sort_c, scale = F) +
+                 speaker*rep_acc*scale(flanker_c, scale = F) +
+                (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m16, 
+                  pred.labels = c("Intercept", "Trial Number", "Speaker [ALS]",
+                                  "Repetition Accuracy [Inaccurate]", "Working Memory", "Cognitive Flexibility", 
+                                  "Inhibitory Control", "Speaker * Repetition Accuracy",
+                                  "Working Memory * Speaker [ALS]", "Cognitive Flexibility * Speaker [ALS]", 
+                                  "Working Memory * Repetition Accuracy [Inaccurate]",
+                                  "Cognitive Flexibility * Repetition Accuracy [Inaccurate]",
+                                  "Inhibitory Control * Speaker [ALS]", 
+                                  "Inhibitory Control * Repetition Accuracy [Inaccurate]",
+                                  "Inhibitory Control * Speaker * Accuracy"),
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m13, m16)
+
+```
+
+### Model 17
+
+```{r, warning = F, message = F}
+
+m17 <- glmmTMB(effort_rating ~ trial_c + speaker*rep_acc + 
+                 speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) +
+                 rep_acc*scale(list_sort_c, scale = F) + rep_acc*scale(card_sort_c, scale = F) +
+                 speaker*rep_acc*scale(card_sort_c, scale = F) +
+                (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m17, 
+                  pred.labels = c("Intercept", "Trial Number", "Speaker [ALS]",
+                                  "Repetition Accuracy [Inaccurate]", "Working Memory", "Cognitive Flexibility", 
+                                  "Speaker * Repetition Accuracy",
+                                  "Working Memory * Speaker [ALS]", "Cognitive Flexibility * Speaker [ALS]", 
+                                  "Working Memory * Repetition Accuracy [Inaccurate]",
+                                  "Cognitive Flexibility * Repetition Accuracy [Inaccurate]",
+                                  "Cognitive Flexibility * Speaker * Accuracy"),
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m13, m17)
+
+```
+
+### Model 18
+
+```{r,warning = F, message = F}
+
+m18 <- glmmTMB(effort_rating ~ trial_c + speaker*rep_acc + 
+                 speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) +
+                 rep_acc*scale(list_sort_c, scale = F) + rep_acc*scale(card_sort_c, scale = F) +
+                 speaker*rep_acc*scale(pattern_c, scale = F) +
+                (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m18, 
+                  pred.labels = c("Intercept", "Trial Number", "Speaker [ALS]",
+                                  "Repetition Accuracy [Inaccurate]", "Working Memory", "Cognitive Flexibility", 
+                                  "Processing Speed", "Speaker * Repetition Accuracy",
+                                  "Working Memory * Speaker [ALS]", "Cognitive Flexibility * Speaker [ALS]", 
+                                  "Working Memory * Repetition Accuracy [Inaccurate]",
+                                  "Cognitive Flexibility * Repetition Accuracy [Inaccurate]",
+                                  "Processing Speed * Speaker [ALS]",
+                                  "Processing Speed * Repetition Accuracy [Inaccurate]",
+                                  "Processing Speed * Speaker * Accuracy"),
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m13, m18)
+
+
+```
+
+### Best Fitting Final Model
+
+Based on the model-building steps above, model 13 is the best fitting model for the perceived listening effort ratings. Since the interaction between speaker and repetition accuracy was not significant during any model building steps, that was removed from the model. Removal of this interaction did not significantly impact model performance. Model assumptions were also visually checked. Most assumptions appear to be met.
+
+The final model take-aways, in reference to the cognitve measures of interest, are:
+- The interaction between working memory and speaker: On average, when listening to the speaker with ALS, listeners with higher working memory scores rated effort higher. 
+- The interaction between cognitive flexibility and speaker: On average, when listening to the speaker with ALS, listeners with higher cognitive flexibility scores rated effort lower.
+- The interaction between working memory and repetition accuracy: On average, listeners with higher working memory scores rated effort phrases they did not accurately recognized lower.
+- The interaction between cognitive flexibility and repetition accuracy: On average, listeners with higher cognitive flexibility scores rated effort higher for phrases they did not accurately recognize.
+- Teh three way interactions between speaker, repetition accuracy, and each of the cognitve measures was tested. None of these interactions were significant.
+
+
+```{r, warning = F, message = F}
+
+m13b <- glmmTMB(effort_rating ~ trial_c + speaker + rep_acc + 
+                 speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) +
+                 rep_acc*scale(list_sort_c, scale = F) + rep_acc*scale(card_sort_c, scale = F) +
+                (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m13b, 
+                  pred.labels = c("Intercept", "Trial Number", "Speaker [ALS]",
+                                  "Repetition Accuracy [Inaccurate]", "Working Memory", "Cognitive Flexibility",
+                                  "Working Memory * Speaker [ALS]", "Cognitive Flexibility * Speaker [ALS]", 
+                                  "Working Memory * Repetition Accuracy [Inaccurate]",
+                                  "Cognitive Flexibility * Repetition Accuracy [Inaccurate]"),
+                  dv.labels = "Perceived Listening Effort",
+                  show.std = T,
+                  file = "Tables/ple_model.html")
+
+performance::test_performance(m13, m13b)
+performance::check_model(m0)
+
+```
 
