@@ -262,7 +262,7 @@ m0_prediction <- plot_smooth(m0_pupil,
 ```
 
 
-```{r}
+```{r, warning = F, message = F}
 
 m0_predicted_values <- m0_prediction[[1]][c("condition", "time_norm", "fit", "ul", "ll")] |>
   dplyr::mutate(rep_acc = ifelse(grepl("inaccurate", condition, ignore.case = T), "inaccurate", "accurate"),
@@ -289,6 +289,8 @@ m0_predicted_values |>
        color = "Speaker",
        linetype = "Repetition Accuracy") +
   scale_color_manual(values = c(my_pal[1], my_pal[2]), labels = c("Neurotypical", "ALS"))
+
+ggsave("Figures/pupil_dilation_plot.png", plot = last_plot())
 
 ```
 
@@ -581,7 +583,9 @@ process_predicted_values |>
        y = "Pupil Dilation (Arbitrary Units)",
        color = "Speaker",
        linetype = "Repetition Accuracy") +
-  scale_color_manual(values = c(my_pal[1], my_pal[2]))
+  scale_color_manual(values = c(my_pal[1], my_pal[2]), labels = c("Neurotypical", "ALS"))
+
+ggsave("Figures/processing_speed_pupil.png", plot = last_plot())
 
 ```
 
@@ -590,9 +594,7 @@ process_predicted_values |>
 
 ## Visualization
 
-```{r}
-
-# Merge PLE data with rep acc and listener cog
+```{r, warning = F, message = F}
 
 ple <- ple |>
   dplyr::left_join(acc, by = c("subject", "trial")) |>
@@ -602,6 +604,33 @@ ple <- ple |>
   dplyr::filter(effort_rating <= 7) |>
   dplyr::mutate(trial_c = trial - 6,
                 speaker = factor(speaker, levels = c("Control", "ALS")))
+
+ple |>
+  dplyr::group_by(speaker, rep_acc) |>
+  dplyr::summarize(per_effort = mean(effort_rating, na.rm = T), 
+                   sd = sd(effort_rating, na.rm = T),
+                   se = sd/sqrt(n())) |>
+  ggplot() +
+   aes(x = rep_acc,
+       y = per_effort,
+       group = speaker,
+       color = speaker,
+       fill = speaker) +
+  geom_bar(stat = "identity", alpha = 0.6, position = position_dodge()) +
+  geom_errorbar(aes(ymin = per_effort - se, ymax = per_effort + se), width = 0.4, position = position_dodge(.9)) +
+  labs(x = "Accuracy", y = "Perceived Listening Effort Rating", color = "Speaker", fill = "Speaker") +
+  theme_bw() +
+  theme(aspect.ratio = 1) +
+  scale_color_manual(values = c(my_pal[1], my_pal[2]), labels =  c("Neurotypical", "ALS")) +
+  scale_fill_manual(values = c(my_pal[1], my_pal[2]), labels = c("Neurotypical", "ALS"))
+
+ggsave("Figures/ple_plot.png", plot = last_plot())
+
+```
+
+
+
+```{r, warning = F, message = F}
 
 ple |>
   dplyr::select(subject, trial, speaker, code, effort_rating, rep_acc, ends_with("_c")) |>
