@@ -120,7 +120,7 @@ ggsave("Figures/peak_pupil_plot.png", plot = last_plot(), width = 3, height = 6,
 
 ### Fully Unconditional Model
 
-```{r}
+```{r, warning = F, message = F}
 
 m0 <- glmmTMB(peak_pupil ~ 1 + (1|subject), data = peak_pupil_df)
 sjPlot::tab_model(m0, pred.labels = "Intercept",
@@ -144,7 +144,7 @@ performance::test_performance(m0, m1)
 
 ### Model 2
 
-```{r}
+```{r, warning = F, message = F}
 
 m2 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc + (trial_c|subject), data = peak_pupil_df)
 sjPlot::tab_model(m2, pred.labels = "Intercept",
@@ -155,7 +155,7 @@ performance::test_performance(m1, m2)
 
 ### Model 3
 
-```{r}
+```{r, warning = F, message = F}
 
 m3 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc + scale(list_sort_c, scale = F) + (1|subject), data = peak_pupil_df)
 sjPlot::tab_model(m3, pred.labels = "Intercept",
@@ -166,7 +166,7 @@ performance::test_performance(m2, m3)
 
 ### Model 3b
 
-```{r}
+```{r, warning = F, message = F}
 
 m3b <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc + (1|subject), data = peak_pupil_df)
 sjPlot::tab_model(m3b, pred.labels = "Intercept",
@@ -177,7 +177,7 @@ performance::test_performance(m3, m3b)
 
 ### Model 4
 
-```{r}
+```{r, warning = F, message = F}
 
 m4 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc + scale(flanker_c, scale = F) + (1|subject), data = peak_pupil_df)
 sjPlot::tab_model(m4, pred.labels = "Intercept",
@@ -188,7 +188,7 @@ performance::test_performance(m3b, m4)
 
 ### Model 5
 
-```{r}
+```{r, warning = F, message = F}
 
 m5 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc + scale(card_sort_c, scale = F) + (1|subject), data = peak_pupil_df)
 sjPlot::tab_model(m5, pred.labels = "Intercept",
@@ -199,7 +199,7 @@ performance::test_performance(m3b, m5)
 
 ### Model 6
 
-```{r}
+```{r, warning = F, messgae = F}
 
 m6 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc + scale(pattern_c,scale = F) + (1|subject), data = peak_pupil_df)
 sjPlot::tab_model(m6, pred.labels = "Intercept",
@@ -210,7 +210,7 @@ performance::test_performance(m3b, m6)
 
 ### Model 7
 
-```{r}
+```{r, warning = F, message = F}
 
 m7 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc + 
                 speaker*scale(list_sort_c, scale = F) + (1|subject), data = peak_pupil_df)
@@ -222,7 +222,7 @@ performance::test_performance(m3b, m7)
 
 ### Model 8
 
-```{r}
+```{r, warning = F, message = F}
 
 m8 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc + 
                 speaker*scale(list_sort_c, scale = F) + speaker*scale(flanker_c, scale = F) + (1|subject), data = peak_pupil_df)
@@ -234,7 +234,7 @@ performance::test_performance(m7, m8)
 
 ### Model 9
 
-```{r}
+```{r, warning = F, message = F}
 
 m9 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc + 
                 speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) + (1|subject), data = peak_pupil_df)
@@ -246,7 +246,7 @@ performance::test_performance(m7, m9)
 
 ### Model 10
 
-```{r}
+```{r, warning = F, message = F}
 
 m10 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc + 
                 speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) + speaker*scale(pattern_c, scale = F) +
@@ -259,7 +259,7 @@ performance::test_performance(m9, m10)
 
 ### Model 11
 
-```{r}
+```{r, warning = F, message = F}
 
 m11 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc + 
                  speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) + 
@@ -273,7 +273,7 @@ performance::test_performance(m9, m11)
 
 ### Model 12
 
-```{r}
+```{r, warning = F, message = F}
 
 m12 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc + 
                  speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) + 
@@ -287,7 +287,7 @@ performance::test_performance(m11, m12)
 
 ### Model 13
 
-```{r}
+```{r, warning = F, message = F}
 
 m13 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc + 
                  speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) + 
@@ -302,7 +302,7 @@ performance::test_performance(m11, m13)
 
 ### Model 14
 
-```{r}
+```{r, wrning = F, message = F}
 
 m14 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc + 
                  speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) + 
@@ -316,7 +316,7 @@ performance::test_performance(m11, m14)
 
 ### Model 15
 
-```{r}
+```{r, warning = F, message = F}
 
 m15 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc + 
                  speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) + 
@@ -332,7 +332,7 @@ performance::test_performance(m14, m15)
 
 ### Model 16
 
-```{r}
+```{r, warning = F, message = F}
 
 m16 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc + 
                  speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) + 
@@ -348,7 +348,7 @@ performance::test_performance(m14, m16)
 
 ### Model 17
 
-```{r}
+```{r, warning = F, message = F}
 
 m17 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc + 
                  speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) + 
@@ -363,7 +363,7 @@ performance::test_performance(m14, m17)
 
 ### Model 18
 
-```{r}
+```{r, warning = F, message = F}
 
 m18 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc + 
                  speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) + 
@@ -378,7 +378,7 @@ performance::test_performance(m14, m18)
 
 ### Best-Fitting Final Model
 
-```{r}
+```{r, warning = F, message = F}
 
 m14b <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc + 
                   speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) + 
@@ -387,6 +387,7 @@ m14b <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc +
 sjPlot::tab_model(m14b, pred.labels = "Intercept",
                   dv.labels = "Peak Pupil Dilation")
 performance::check_model(m14b)
+performance::test_performance(m14, m14b)
 
 ```
 
@@ -399,8 +400,10 @@ performance::check_model(m14b)
 
 # Merge PLE data with rep acc and listener cog
 
+ple <- rio::import("Cleaned Data\\cleaned_ple_data.csv")
+
 ple <- ple |>
-  dplyr::left_join(acc, by = c("subject", "trial")) |>
+  dplyr::left_join(phrase_acc, by = c("subject", "trial")) |>
   dplyr::filter(!is.na(rep_acc)) |>
   dplyr::left_join(cog, by = "subject") |>
   dplyr::filter(effort_rating > 0) |>
@@ -427,12 +430,16 @@ ple |>
       shape = speaker) +
   geom_point(alpha = 0.6) +
   geom_smooth(method = "lm") +
-  facet_grid(rep_acc ~ cog_measure) +
+  facet_grid(cog_measure ~ rep_acc) +
   labs(x = "Score", y = "Perceived Listening Effort Rating") +
   theme_classic() +
   scale_color_manual(values = my_pal) +
   scale_shape_manual(values = c(1, 2)) +
-  theme(aspect.ratio = 1)
+  theme(aspect.ratio = 1,
+        panel.spacing.x = unit(.8, "lines"),
+        legend.position = "bottom")
+
+ggsave("Figures/ple_plot.png", plot = last_plot(), width = 3, height = 6, units = "in", scale = 1.2)
 
 ```
 
