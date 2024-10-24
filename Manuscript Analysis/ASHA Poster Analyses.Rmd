@@ -478,6 +478,13 @@ performance::test_performance(m14, m14b)
 
 ### Best Fitting Final Model
 
+This is the best fitting model for the pupil dilation data. In regards to the cognitive data, here are the key take-aways:
+
+- Interaction between Working Memory and Speaker: On average, when listening to the ALS speaker, listeners with higher working memory scores had greater peak pupil dilation.
+- Interaction between Cognitive Flexibility and Speaker: On average, when listening to the ALS speaker, listeners with greater cognitive flexibility scores had larger peak pupil dilation values.
+- Interaction between processing speed and repetition accuracy: On average, when the phrase was inaccurately recognized, listeners with greater processing speed had greater peak pupil dilation.
+- The three way interaction between speaker, repetition accuracy, and each cognitive measure of interest was tested. However, none of them were significant. This indicates that the pattern in pupil response did not differ much between accurate and inaccurately recognized phrases for the ALS speaker (for working memory and cognitive flexibility). Additionally, the pattern of pupil response did not significantly differ between inaccurately-recognized control and ALS speakers for processing speed.
+
 ```{r, warning = F, message = F}
 
 m14c <- glmmTMB(peak_pupil ~ trial_c + speaker + rep_acc + 
@@ -502,7 +509,6 @@ performance::test_performance(m14b, m14c)
 # Perceived Listening Effort 
 
 ## Visualizations
-
 
 ```{r}
 
