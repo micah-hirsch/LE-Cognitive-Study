@@ -147,7 +147,9 @@ performance::test_performance(m0, m1)
 ```{r, warning = F, message = F}
 
 m2 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc + (trial_c|subject), data = peak_pupil_df)
-sjPlot::tab_model(m2, pred.labels = "Intercept",
+sjPlot::tab_model(m2, 
+                  pred.labels = c("Intercept", "Trial Number", "Speaker [ALS]", "Repetition Accuracy [Inaccurate]",
+                                  "Speaker * Repetition Accuracy"),
                   dv.labels = "Peak Pupil Dilation")
 performance::test_performance(m1, m2)
 
@@ -158,7 +160,9 @@ performance::test_performance(m1, m2)
 ```{r, warning = F, message = F}
 
 m3 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc + scale(list_sort_c, scale = F) + (1|subject), data = peak_pupil_df)
-sjPlot::tab_model(m3, pred.labels = "Intercept",
+sjPlot::tab_model(m3, 
+                  pred.labels = c("Intercept", "Trial Number", "Speaker [ALS]", "Repetition Accuracy [Inaccurate]",
+                                  "Working Memory", "Speaker * Repetition Accuracy"),
                   dv.labels = "Peak Pupil Dilation")
 performance::test_performance(m2, m3)
 
@@ -169,7 +173,9 @@ performance::test_performance(m2, m3)
 ```{r, warning = F, message = F}
 
 m3b <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc + (1|subject), data = peak_pupil_df)
-sjPlot::tab_model(m3b, pred.labels = "Intercept",
+sjPlot::tab_model(m3b,
+                  pred.labels = c("Intercept", "Trial Number", "Speaker [ALS]", "Repetition Accuracy [Inaccurate]", 
+                                  "Speaker * Repetition Accuracy"),
                   dv.labels = "Peak Pupil Dilation")
 performance::test_performance(m3, m3b)
 
@@ -180,7 +186,9 @@ performance::test_performance(m3, m3b)
 ```{r, warning = F, message = F}
 
 m4 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc + scale(flanker_c, scale = F) + (1|subject), data = peak_pupil_df)
-sjPlot::tab_model(m4, pred.labels = "Intercept",
+sjPlot::tab_model(m4, 
+                  pred.labels = c("Intercept", "Trial Number", "Speaker [ALS]", "Repetition Accuracy [Inaccurate]",
+                                  "Inhibitory Control", "Speaker * Repetition Accuracy"),
                   dv.labels = "Peak Pupil Dilation")
 performance::test_performance(m3b, m4)
 
@@ -191,7 +199,9 @@ performance::test_performance(m3b, m4)
 ```{r, warning = F, message = F}
 
 m5 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc + scale(card_sort_c, scale = F) + (1|subject), data = peak_pupil_df)
-sjPlot::tab_model(m5, pred.labels = "Intercept",
+sjPlot::tab_model(m5, 
+                  pred.labels = c("Intercept", "Trial Number", "Speaker [ALS]", "Repetition Accuracy [Inaccurate]",
+                                  "Cognitive Flexibility", "Speaker * Repetition Accuracy"),
                   dv.labels = "Peak Pupil Dilation")
 performance::test_performance(m3b, m5)
 
@@ -202,7 +212,9 @@ performance::test_performance(m3b, m5)
 ```{r, warning = F, messgae = F}
 
 m6 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc + scale(pattern_c,scale = F) + (1|subject), data = peak_pupil_df)
-sjPlot::tab_model(m6, pred.labels = "Intercept",
+sjPlot::tab_model(m6, 
+                  pred.labels = c("Intercept", "Trial Number", "Speaker [ALS]", "Repetition Accuracy [Inaccurate]",
+                                  "Processing Speed", "Speaker * Repetition Accuracy"),
                   dv.labels = "Peak Pupil Dilation")
 performance::test_performance(m3b, m6)
 
@@ -214,7 +226,9 @@ performance::test_performance(m3b, m6)
 
 m7 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc + 
                 speaker*scale(list_sort_c, scale = F) + (1|subject), data = peak_pupil_df)
-sjPlot::tab_model(m7, pred.labels = "Intercept",
+sjPlot::tab_model(m7, 
+                  pred.labels = c("Intercept", "Trial Number", "Speaker [ALS]", "Repetition Accuracy [Inaccurate]",
+                                  "Working Memory", "Speaker * Repetition Accuracy", "Working Memory * Speaker [ALS]"),
                   dv.labels = "Peak Pupil Dilation")
 performance::test_performance(m3b, m7)
 
@@ -226,7 +240,11 @@ performance::test_performance(m3b, m7)
 
 m8 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc + 
                 speaker*scale(list_sort_c, scale = F) + speaker*scale(flanker_c, scale = F) + (1|subject), data = peak_pupil_df)
-sjPlot::tab_model(m8, pred.labels = "Intercept",
+sjPlot::tab_model(m8, 
+                  pred.labels = c("Intercept", "Trial Number", "Speaker [ALS]", "Repetition Accuracy [Inaccurate]",
+                                  "Working Memory", "Inhibitory Control", 
+                                  "Speaker * Repetition Accuracy", "Working Memory * Speaker [ALS]",
+                                  "Inhibitory Control * Speaker [ALS]"),
                   dv.labels = "Peak Pupil Dilation")
 performance::test_performance(m7, m8)
 
@@ -238,7 +256,11 @@ performance::test_performance(m7, m8)
 
 m9 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc + 
                 speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) + (1|subject), data = peak_pupil_df)
-sjPlot::tab_model(m9, pred.labels = "Intercept",
+sjPlot::tab_model(m9, 
+                   pred.labels = c("Intercept", "Trial Number", "Speaker [ALS]", "Repetition Accuracy [Inaccurate]",
+                                  "Working Memory", "Cognitive Flexibility",
+                                  "Speaker * Repetition Accuracy", "Working Memory * Speaker [ALS]",
+                                  "Cognitive Flexibility * Speaker [ALS]"),
                   dv.labels = "Peak Pupil Dilation")
 performance::test_performance(m7, m9)
 
@@ -251,7 +273,11 @@ performance::test_performance(m7, m9)
 m10 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc + 
                 speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) + speaker*scale(pattern_c, scale = F) +
                  (1|subject), data = peak_pupil_df)
-sjPlot::tab_model(m10, pred.labels = "Intercept",
+sjPlot::tab_model(m10, 
+                  pred.labels = c("Intercept", "Trial Number", "Speaker [ALS]", "Repetition Accuracy [Inaccurate]",
+                                  "Working Memory", "Cognitive Flexibility", "Processing Speed",
+                                  "Speaker * Repetition Accuracy", "Working Memory * Speaker [ALS]",
+                                  "Cognitive Flexibility * Speaker [ALS]", "Processing Speed * Speaker [ALS]"),
                   dv.labels = "Peak Pupil Dilation")
 performance::test_performance(m9, m10)
 
@@ -265,7 +291,12 @@ m11 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc +
                  speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) + 
                  rep_acc*scale(list_sort_c, scale = F) +
                  (1|subject), data = peak_pupil_df)
-sjPlot::tab_model(m11, pred.labels = "Intercept",
+sjPlot::tab_model(m11, 
+                  pred.labels = c("Intercept", "Trial Number", "Speaker [ALS]", "Repetition Accuracy [Inaccurate]",
+                                  "Working Memory", "Cognitive Flexibility", 
+                                  "Speaker * Repetition Accuracy", "Working Memory * Speaker [ALS]",
+                                  "Cognitive Flexibility * Speaker [ALS]", 
+                                  "Working Memory * Accuracy [Inaccuraate]"),
                   dv.labels = "Peak Pupil Dilation")
 performance::test_performance(m9, m11)
 
@@ -279,7 +310,13 @@ m12 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc +
                  speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) + 
                  rep_acc*scale(list_sort_c, scale = F) + rep_acc*scale(flanker_c, scale = F) +
                  (1|subject), data = peak_pupil_df)
-sjPlot::tab_model(m12, pred.labels = "Intercept",
+sjPlot::tab_model(m12, 
+                  pred.labels = c("Intercept", "Trial Number", "Speaker [ALS]", "Repetition Accuracy [Inaccurate]",
+                                  "Working Memory", "Cognitive Flexibility", "Inhibitory Control",
+                                  "Speaker * Repetition Accuracy", "Working Memory * Speaker [ALS]",
+                                  "Cognitive Flexibility * Speaker [ALS]", 
+                                  "Working Memory * Accuracy [Inaccurate]",
+                                  "Inhibitory Control * Accuracy [Inaccurate]"),
                   dv.labels = "Peak Pupil Dilation")
 performance::test_performance(m11, m12)
 
@@ -293,7 +330,13 @@ m13 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc +
                  speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) + 
                  rep_acc*scale(list_sort_c, scale = F) + rep_acc*scale(card_sort_c, scale = F) +
                  (1|subject), data = peak_pupil_df)
-sjPlot::tab_model(m13, pred.labels = "Intercept",
+sjPlot::tab_model(m13, 
+                  pred.labels = c("Intercept", "Trial Number", "Speaker [ALS]", "Repetition Accuracy [Inaccurate]",
+                                  "Working Memory", "Cognitive Flexibility",
+                                  "Speaker * Repetition Accuracy", "Working Memory * Speaker [ALS]",
+                                  "Cognitive Flexibility * Speaker [ALS]", 
+                                  "Working Memory * Accuracy [Inaccurate]",
+                                  "Cognitive Flexibility * Accuracy [Inaccurate]"),
                   dv.labels = "Peak Pupil Dilation")
 performance::test_performance(m11, m13)
 
@@ -308,7 +351,13 @@ m14 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc +
                  speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) + 
                  rep_acc*scale(list_sort_c, scale = F) + rep_acc*scale(pattern_c, scale = F) +
                  (1|subject), data = peak_pupil_df)
-sjPlot::tab_model(m14, pred.labels = "Intercept",
+sjPlot::tab_model(m14, 
+                  pred.labels = c("Intercept", "Trial Number", "Speaker [ALS]", "Repetition Accuracy [Inaccurate]",
+                                  "Working Memory", "Cognitive Flexibility", "Processing Speed",
+                                  "Speaker * Repetition Accuracy", "Working Memory * Speaker [ALS]",
+                                  "Cognitive Flexibility * Speaker [ALS]", 
+                                  "Working Memory * Accuracy [Inaccurate]",
+                                  "Processing Speed * Accuracy [Inaccurate]"),
                   dv.labels = "Peak Pupil Dilation")
 performance::test_performance(m11, m14)
 
@@ -323,7 +372,14 @@ m15 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc +
                  rep_acc*scale(list_sort_c, scale = F) + rep_acc*scale(pattern_c, scale = F) +
                  speaker*rep_acc*scale(list_sort_c, scale = F) +
                  (1|subject), data = peak_pupil_df)
-sjPlot::tab_model(m15, pred.labels = "Intercept",
+sjPlot::tab_model(m15, 
+                  pred.labels = c("Intercept", "Trial Number", "Speaker [ALS]", "Repetition Accuracy [Inaccurate]",
+                                  "Working Memory", "Cognitive Flexibility", "Processing Speed",
+                                  "Speaker * Repetition Accuracy", "Working Memory * Speaker [ALS]",
+                                  "Cognitive Flexibility * Speaker [ALS]", 
+                                  "Working Memory * Accuracy [Inaccurate]",
+                                  "Processing Speed * Accuracy [Inaccurate]",
+                                  "Working Memory * Speaker * Accuracy"),
                   dv.labels = "Peak Pupil Dilation")
 performance::test_performance(m14, m15)
 
@@ -339,7 +395,16 @@ m16 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc +
                  rep_acc*scale(list_sort_c, scale = F) + rep_acc*scale(pattern_c, scale = F) +
                  speaker*rep_acc*scale(flanker_c, scale = F) +
                  (1|subject), data = peak_pupil_df)
-sjPlot::tab_model(m16, pred.labels = "Intercept",
+sjPlot::tab_model(m16, 
+                  pred.labels = c("Intercept", "Trial Number", "Speaker [ALS]", "Repetition Accuracy [Inaccurate]",
+                                  "Working Memory", "Cognitive Flexibility", "Processing Speed", "Inhibitory Control",
+                                  "Speaker * Repetition Accuracy", "Working Memory * Speaker [ALS]",
+                                  "Cognitive Flexibility * Speaker [ALS]", 
+                                  "Working Memory * Accuracy [Inaccurate]",
+                                  "Processing Speed * Accuracy [Inaccurate]",
+                                  "Inhibitory Control * Speaker [ALS]",
+                                  "Inhibitory Control * Accuracy [Inaccurate]",
+                                  "Inhibitory Control * Speaker * Accuracy"),
                   dv.labels = "Peak Pupil Dilation")
 performance::test_performance(m14, m16)
 
@@ -355,7 +420,15 @@ m17 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc +
                  rep_acc*scale(list_sort_c, scale = F) + rep_acc*scale(pattern_c, scale = F) +
                  speaker*rep_acc*scale(card_sort_c, scale = F) +
                  (1|subject), data = peak_pupil_df)
-sjPlot::tab_model(m17, pred.labels = "Intercept",
+sjPlot::tab_model(m17, 
+                  pred.labels = c("Intercept", "Trial Number", "Speaker [ALS]", "Repetition Accuracy [Inaccurate]",
+                                  "Working Memory", "Cognitive Flexibility", "Processing Speed",
+                                  "Speaker * Repetition Accuracy", "Working Memory * Speaker [ALS]",
+                                  "Cognitive Flexibility * Speaker [ALS]", 
+                                  "Working Memory * Accuracy [Inaccurate]",
+                                  "Processing Speed * Accuracy [Inaccurate]",
+                                  "Cognitive Flexibility * Accuracy [Inaccurate]",
+                                  "Cognitive Flexibility * Speaker * Accuracy"),
                   dv.labels = "Peak Pupil Dilation")
 performance::test_performance(m14, m17)
 
@@ -370,13 +443,21 @@ m18 <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc +
                  rep_acc*scale(list_sort_c, scale = F) + rep_acc*scale(pattern_c, scale = F) +
                  speaker*rep_acc*scale(pattern_c, scale = F) +
                  (1|subject), data = peak_pupil_df)
-sjPlot::tab_model(m18, pred.labels = "Intercept",
+sjPlot::tab_model(m18, 
+                  pred.labels = c("Intercept", "Trial Number", "Speaker [ALS]", "Repetition Accuracy [Inaccurate]",
+                                  "Working Memory", "Cognitive Flexibility", "Processing Speed",
+                                  "Speaker * Repetition Accuracy", "Working Memory * Speaker [ALS]",
+                                  "Cognitive Flexibility * Speaker [ALS]", 
+                                  "Working Memory * Accuracy [Inaccurate]",
+                                  "Processing Speed * Accuracy [Inaccurate]",
+                                  "Processing Speed * Speaker [ALS]",
+                                  "Processing Speed * Speaker * Accuracy"),
                   dv.labels = "Peak Pupil Dilation")
 performance::test_performance(m14, m18)
 
 ```
 
-### Best-Fitting Final Model
+### Removing the interaction between repetition accuracy and working memory
 
 ```{r, warning = F, message = F}
 
@@ -384,12 +465,39 @@ m14b <- glmmTMB(peak_pupil ~ trial_c + speaker*rep_acc +
                   speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) + 
                   rep_acc*scale(pattern_c, scale = F) +
                   (1|subject), data = peak_pupil_df)
-sjPlot::tab_model(m14b, pred.labels = "Intercept",
+sjPlot::tab_model(m14b, 
+                  pred.labels = c("Intercept", "Trial Number", "Speaker [ALS]", "Repetition Accuracy [Inaccurate]",
+                                  "Working Memory", "Cognitive Flexibility", "Processing Speed", 
+                                  "Speaker * Repetition Accuracy", "Working Memory * Speaker [ALS]",
+                                  "Cognitive Flexibility * Speaker [ALS]",
+                                  "Processing Speed * Repetition Accuracy [Inacccurate]"),
                   dv.labels = "Peak Pupil Dilation")
-performance::check_model(m14b)
 performance::test_performance(m14, m14b)
 
 ```
+
+### Best Fitting Final Model
+
+```{r, warning = F, message = F}
+
+m14c <- glmmTMB(peak_pupil ~ trial_c + speaker + rep_acc + 
+                  speaker*scale(list_sort_c, scale = F) + speaker*scale(card_sort_c, scale = F) + 
+                  rep_acc*scale(pattern_c, scale = F) +
+                  (1|subject), data = peak_pupil_df)
+sjPlot::tab_model(m14c, 
+                  pred.labels = c("Intercept", "Trial Number", "Speaker [ALS]", "Repetition Accuracy [Inaccurate]",
+                                  "Working Memory", "Cognitive Flexibility", "Processing Speed", 
+                                  "Working Memory * Speaker [ALS]",
+                                  "Cognitive Flexibility * Speaker [ALS]", 
+                                  "Processing Speed * Repetition Accuracy [Inacccurate]"),
+                  dv.labels = "Peak Pupil Dilation",
+                  show.std = T,
+                  file = "Tables/Peak_pupil_model.html")
+performance::check_model(m14c)
+performance::test_performance(m14b, m14c)
+
+```
+
 
 # Perceived Listening Effort 
 
