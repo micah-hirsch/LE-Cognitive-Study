@@ -15,7 +15,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Purpose
 
-This document provides the code for the peak pupil dilation  and perceived listening effort analyses for a poster presentation presented at the 2024 Annual Speech Language and Hearing Association Convention. The presentation information is below:
+This document provides the code for the peak pupil dilation and perceived listening effort analyses for a poster presentation presented at the 2024 Annual Speech Language and Hearing Association Convention. The presentation information is below:
 
 -   **Title:** The Relationship Between Listener Cognition and Listening Effort During Dysarthric Speech Perception
 
@@ -62,7 +62,6 @@ phrase_acc <- rio::import("Cleaned Data/repetition_accuracy.csv") |>
 
 
 ```
-
 
 # Peak Pupil Dilation
 
@@ -389,7 +388,6 @@ performance::test_performance(m14, m15)
 
 ```
 
-
 ### Model 16
 
 ```{r, warning = F, message = F}
@@ -484,10 +482,10 @@ performance::test_performance(m14, m14b)
 
 This is the best fitting model for the pupil dilation data. Model assumptions were also visually checked using the performance package. In regards to the cognitive data, here are the key take-aways:
 
-- Interaction between Working Memory and Speaker: On average, when listening to the ALS speaker, listeners with higher working memory scores had greater peak pupil dilation.
-- Interaction between Cognitive Flexibility and Speaker: On average, when listening to the ALS speaker, listeners with greater cognitive flexibility scores had larger peak pupil dilation values.
-- Interaction between processing speed and repetition accuracy: On average, when the phrase was inaccurately recognized, listeners with greater processing speed had greater peak pupil dilation.
-- The three way interaction between speaker, repetition accuracy, and each cognitive measure of interest was tested. However, none of them were significant. This indicates that the pattern in pupil response did not differ much between accurate and inaccurately recognized phrases for the ALS speaker (for working memory and cognitive flexibility). Additionally, the pattern of pupil response did not significantly differ between inaccurately-recognized control and ALS speakers for processing speed.
+-   Interaction between Working Memory and Speaker: On average, when listening to the ALS speaker, listeners with higher working memory scores had greater peak pupil dilation.
+-   Interaction between Cognitive Flexibility and Speaker: On average, when listening to the ALS speaker, listeners with greater cognitive flexibility scores had larger peak pupil dilation values.
+-   Interaction between processing speed and repetition accuracy: On average, when the phrase was inaccurately recognized, listeners with greater processing speed had greater peak pupil dilation.
+-   The three way interaction between speaker, repetition accuracy, and each cognitive measure of interest was tested. However, none of them were significant. This indicates that the pattern in pupil response did not differ much between accurate and inaccurately recognized phrases for the ALS speaker (for working memory and cognitive flexibility). Additionally, the pattern of pupil response did not significantly differ between inaccurately-recognized control and ALS speakers for processing speed.
 
 ```{r, warning = F, message = F}
 
@@ -509,8 +507,7 @@ performance::test_performance(m14b, m14c)
 
 ```
 
-
-# Perceived Listening Effort 
+# Perceived Listening Effort
 
 ## Visualizations
 
@@ -575,7 +572,6 @@ performance::icc(m0)
 performance::check_model(m0)
 
 ```
-
 
 ### Model 1
 
@@ -699,6 +695,7 @@ sjPlot::tab_model(m8,
 performance::test_performance(m7, m8)
 
 ```
+
 ### Model 9
 
 ```{r, warning = F, message = F}
@@ -736,6 +733,7 @@ sjPlot::tab_model(m10,
 performance::test_performance(m9, m10)
 
 ```
+
 ### Model 11
 
 ```{r, warning = F, message = F}
@@ -797,6 +795,7 @@ sjPlot::tab_model(m13,
 performance::test_performance(m11, m13)
 
 ```
+
 ### Model 14
 
 ```{r, warning = F, message = F}
@@ -921,13 +920,17 @@ performance::test_performance(m13, m18)
 
 Based on the model-building steps above, model 13 is the best fitting model for the perceived listening effort ratings. Since the interaction between speaker and repetition accuracy was not significant during any model building steps, that was removed from the model. Removal of this interaction did not significantly impact model performance. Model assumptions were also visually checked. Most assumptions appear to be met.
 
-The final model take-aways, in reference to the cognitve measures of interest, are:
-- The interaction between working memory and speaker: On average, when listening to the speaker with ALS, listeners with higher working memory scores rated effort higher. 
-- The interaction between cognitive flexibility and speaker: On average, when listening to the speaker with ALS, listeners with higher cognitive flexibility scores rated effort lower.
-- The interaction between working memory and repetition accuracy: On average, listeners with higher working memory scores rated effort phrases they did not accurately recognized lower.
-- The interaction between cognitive flexibility and repetition accuracy: On average, listeners with higher cognitive flexibility scores rated effort higher for phrases they did not accurately recognize.
-- Teh three way interactions between speaker, repetition accuracy, and each of the cognitve measures was tested. None of these interactions were significant.
+The final model take-aways, in reference to the cognitive measures of interest, are:
 
+-   The interaction between working memory and speaker: On average, when listening to the speaker with ALS, listeners with higher working memory scores rated effort higher.
+
+-   The interaction between cognitive flexibility and speaker: On average, when listening to the speaker with ALS, listeners with higher cognitive flexibility scores rated effort lower.
+
+-   The interaction between working memory and repetition accuracy: On average, listeners with higher working memory scores rated effort phrases they did not accurately recognized lower.
+
+-   The interaction between cognitive flexibility and repetition accuracy: On average, listeners with higher cognitive flexibility scores rated effort higher for phrases they did not accurately recognize.
+
+-   The three way interactions between speaker, repetition accuracy, and each of the cognitive measures was tested. None of these interactions were significant.
 
 ```{r, warning = F, message = F}
 
@@ -949,4 +952,3 @@ performance::test_performance(m13, m13b)
 performance::check_model(m0)
 
 ```
-
