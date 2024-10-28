@@ -1,0 +1,988 @@
+---
+title: "Cognitive Analysis"
+author: "Micah E. Hirsch"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Purpose
+
+The purpose of this document is to share the analysis code and report the results for the manuscript. The full Rmd version of the document can be found on the project's Github repository or OSF project page. The data cleaning code for the pupil and perceived listening effort ratings can be found in the Github repo. Analyses were conducted using R version 4.4.1.
+
+```{r, warning = F, message = F}
+
+# Loading in the needed packages
+
+library(tidyverse) # install.packages("tidyverse")
+library(rio) # install.packages("rio")
+library(glmmTMB) # install.packages("glmmTMB")
+library(janitor) # install.packages("janitor")
+library(ggpubr) # install.packages("ggpubr")
+library(patchwork) # install.packages("patchwork")
+library(gt) # install.packages("gt")
+library(gtsummary) # install.packages("gtsummary")
+library(ggridges) # install.packages("ggridges")
+library(performance) # install.packages("performance")
+library(sjPlot) # install.packages("sjPlot")
+library(ggcorrplot) # install.packages("ggcorrplot")
+library(mgcv) # install.packages("mgcv")
+library(itsadug) # install.packages("itsadug")
+library(viridis) # install.packages("viridis")
+
+# Load in the listener demographics data 
+
+demo <- rio::import("Cleaned Data/cleaned_listener_demo.csv") |>
+  dplyr::filter(pupil_complete == "complete") |>
+  dplyr::select(id, age, gender, ethnicity, race, native_lang) |>
+  dplyr::mutate(gender = factor(gender, levels = c("Man", "Woman", "Nonbinary", "Questioning", "Prefer not to answer")),
+                ethnicity = factor(ethnicity, levels = c("Hispanic/Latino(a/e)", "Not Hispanic/Latino(a/e)", "Prefer not to answer")),
+                race = factor(race, levels = c("white/Caucasian", "Black/African American", "Asian/Asian American",
+                                               "Native Hawaiian or Other Pacific Islander", "Native American or Alaska Native",
+                                               "Biracial or Multiracial", "Race not listed", "Prefer not to answer")),
+                native_lang = factor(native_lang, c("American English", "Not American English"))) |>
+  dplyr::rename(subject = id)
+
+# Loading in the cog data
+
+cog <- rio::import("Cleaned Data/cleaned_cog_data.csv") 
+
+# Loading in the pupil data
+
+pupil <- rio::import("Cleaned Data/cleaned_pupil_data_normalized.csv") 
+
+# Loading in the PLE data
+
+ple <- rio::import("Cleaned Data/cleaned_ple_data.csv") 
+
+# Loading in the phrase accuracy data
+
+phrase_acc <- rio::import("Cleaned Data/repetition_accuracy.csv") |>
+  dplyr::mutate(rep_acc = ifelse(initial_response == "missing data", NA, 
+                                 ifelse(target_number == correct_words_initial, "accurate", "inaccurate")),
+                rep_acc_rel = ifelse(rel_response == "missing data", NA, 
+                                 ifelse(target_number == correct_words_rel, "accurate", "inaccurate")))
+
+
+```
+
+
+# Listener Characteristics
+
+## Demographic Information
+
+The listeners used in this study are the same from the parent study. In brief, the demographic information from these listeners are below. A total of 34 young adult listeners participated in the experiment.
+
+```{r, warning = F, message = F}
+
+demo_table <- demo |>
+  dplyr::select(age, gender, ethnicity, race, native_lang) |>
+  tbl_summary(type = list(age ~ "continuous",
+                          gender ~ "categorical",
+                          ethnicity ~ "categorical",
+                          race ~ "categorical",
+                          native_lang ~ "categorical"),
+              statistic = list(all_continuous() ~ "{mean} ({sd})",
+                               all_categorical() ~ "{n} ({p}%)"),
+              digits = list(everything() ~ c(2)),
+              label = list(age ~ "Age",
+                           gender ~ "Gender",
+                           ethnicity ~ "Ethnicity",
+                           race ~ "Race",
+                           native_lang ~ "Native Language")) |>
+  as_gt()
+
+demo_table
+
+demo_table |>
+  gt::gtsave("Tables/demo_table.html")
+
+```
+
+## Listener Cognition
+
+### Distribution of Cognitive Scores
+
+The information below reports the mean age-corrected standardized scores on the subtests from the NIH Toolbox cognition battery (working memory, inhibitory control, cognitive flexibility, and processing speed). 
+
+```{r, warning = F, message = F}
+
+cog_table <- cog |>
+  dplyr::select(-subject) |>
+  # Just using the age-corrected scores
+  dplyr::select(ends_with("_c")) |>
+  tbl_summary(statistic = list(all_continuous() ~ "{mean} ({sd})"),
+              digits = list(everything() ~ c(2)),
+              label = list(list_sort_c ~ "Working Memory",
+                           flanker_c ~ "Inhibitory Control",
+                           card_sort_c ~ "Cognitive Flexibility",
+                           pattern_c ~ "Processing Speed")) |>
+  as_gt()
+
+cog_table
+
+cog_table |>
+  gt::gtsave("Tables/cog_table.html")
+
+```
+
+```{r, warning = F, message = F}
+
+# Color Palette for Figures
+my_pal <- c("#25CED1", "#0D3B66", "#F75C03", "#3B5249", "#F1C40F", "#D90368")
+
+cog |>
+  dplyr::select(subject, ends_with("_c")) |>
+  dplyr::rename("Working Memory" = list_sort_c,
+                "Inhibitory Control" = flanker_c,
+                "Cognitive Flexibility" = card_sort_c,
+                "Processing Speed" = pattern_c) |>
+  tidyr::pivot_longer(cols = 'Working Memory':'Processing Speed',
+                      names_to = "cog_measure",
+                      values_to = "score") |>
+  ggplot() +
+  aes(x = score,
+      y = cog_measure,
+      color = cog_measure,
+      fill = cog_measure) +
+  geom_density_ridges(jittered_points = T,
+                      position = position_points_jitter(width = 0.05, height = 0),
+                      point_shape = '|', point_size = 3, point_alpha = 1, alpha = 0.5) +
+  labs(x = "Score", y = "", color = "Cognitive Measure", fill = "Cognitive Measure") +
+  scale_color_manual(values = c(my_pal[3],my_pal[4], my_pal[5], my_pal[6])) +
+  scale_fill_manual(values = c(my_pal[3],my_pal[4], my_pal[5], my_pal[6])) +
+  theme_classic() +
+  theme(legend.position = "none")
+
+ggsave("Figures\\cog_distribution.png", plot = last_plot())
+
+```
+### Correlation Among Cognitive Subtests
+
+```{r, warning = F, message = F}
+
+cog |>
+  dplyr::select(ends_with("_c")) |>
+  dplyr::rename('Working Memory' = list_sort_c,
+                'Inhibitory Control' = flanker_c,
+                'Cognitive Flexibility' = card_sort_c,
+                'Processing Speed' = pattern_c) |>
+  cor(use = "pairwise.complete.obs") |>
+  ggcorrplot(
+    type = "lower",
+    outline.col = "white",
+    lab = TRUE,
+    insig = "blank",
+    legend.title = "Correlation"
+  )
+
+ggsave("Figures\\cog_correlation.png", plot = last_plot())
+
+```
+
+
+
+```{r, echo = F}
+
+# Removing unneeded items
+
+rm(cog_table, demo)
+
+```
+
+
+# Pupil Dilation
+
+```{r, warning = F, message = F}
+
+# Selecting needed variables from phrase repetition accuracy df
+
+acc <- phrase_acc |>
+  dplyr::select(subject, trial, target_number, correct_words_initial, rep_acc)
+
+## Merging acc df with pupil dilation df
+
+pupil <- pupil |>
+  # Merging phrase accuracy information with df
+  dplyr::left_join(acc, by = c("subject", "trial")) |>
+  # Filter out trials with missing phrase repetition data |>
+  dplyr::filter(!is.na(rep_acc)) |>
+  # Merging cognitive data
+  dplyr::left_join(cog, by = "subject")
+
+```
+
+
+## Base Model
+
+Final Model from parent study. This is just modeling pupil dilation changing by levels of condition (interaction between speaker and phrase repetition accuracy).
+
+```{r, warning = F, message = F}
+
+pupil <- pupil |>
+  dplyr::mutate(speaker = factor(speaker, levels = c("Control", "ALS")),
+                rep_acc = factor(rep_acc, levels = c("accurate", "inaccurate")),
+                phrase = as.factor(code),
+                listener = as.factor(subject),
+                condition = case_when(speaker == "Control" & rep_acc == "accurate" ~ "Control Accurate",
+                                      speaker == "Control" & rep_acc == "inaccurate" ~ "Control Inaccurate",
+                                      speaker == "ALS" & rep_acc == "accurate" ~ "ALS Accurate",
+                                      TRUE ~ "ALS Inaccurate"),
+                condition = factor(condition, 
+                                   levels = c("Control Accurate", "Control Inaccurate", "ALS Accurate", "ALS Inaccurate"))) |>
+  dplyr::group_by(listener, speaker) |>
+  dplyr::mutate(num_points = n()) |>
+  dplyr::mutate(start_event = c(TRUE, rep(FALSE, each = (num_points - 1)))) |>
+  ungroup()
+
+m0_pupil <- bam(normed_pupil ~ condition +
+                  s(time_norm, by = condition, k = 25) +
+                  # Random Smooth for listener
+                  s(time_norm, listener, bs = 'fs', m = 1),
+                discrete = T,
+                AR.start = start_event,
+                rho = .9341941,
+                family = "scat",
+                data = pupil)
+
+summary.gam(m0_pupil)
+
+m0_prediction <- plot_smooth(m0_pupil,
+            view = "time_norm",
+            plot_all = "condition",
+            rug = F, se = 1, rm.ranef = T)
+
+```
+
+
+```{r, warning = F, message = F}
+
+m0_predicted_values <- m0_prediction[[1]][c("condition", "time_norm", "fit", "ul", "ll")] |>
+  dplyr::mutate(rep_acc = ifelse(grepl("inaccurate", condition, ignore.case = T), "inaccurate", "accurate"),
+                speaker = ifelse(grepl("Control", condition, ignore.case = T), "Control", "ALS"),
+                speaker = factor(speaker, levels = c("Control", "ALS")))
+
+m0_predicted_values |>
+  ggplot() +
+  aes(x = time_norm,
+      y = fit,
+      color = speaker,
+      linetype = rep_acc,
+      fill = speaker) +
+  geom_line(size = .8) +
+  geom_vline(xintercept = 0, size = 0.35) +
+  geom_vline(xintercept = 1910, linetype = 2) +
+  annotate("rect", xmin = 500, xmax = 2910, ymin = 0, ymax = 200, alpha = 0.15) +
+  coord_cartesian(ylim = c(-10, 250), xlim = c(0, 4910)) +
+  theme_bw() +
+  theme(aspect.ratio = 1,
+        legend.position = "bottom") +
+  labs(x = "Normalized Time (ms)",
+       y = "Pupil Dilation (Arbitrary Units)",
+       color = "Speaker",
+       linetype = "Repetition Accuracy") +
+  scale_color_manual(values = c(my_pal[1], my_pal[2]), labels = c("Neurotypical", "ALS"))
+
+ggsave("Figures/pupil_dilation_plot.png", plot = last_plot())
+
+```
+
+## Working Memory
+
+Now, to test whether pupil dilation is impacted by working memory capacity, a smooth was added to this model: the age-corrected standardized working memory scores from the NIH Toolbox Cognition battery. The smooth was added per level of "condition" (interaction between speaker and repetition accuracy).
+
+```{r, warning = F, message = F}
+
+wm_pupil <- bam(normed_pupil ~ condition +
+                  s(time_norm, by = condition, k = 25) +
+                  s(list_sort_c, by = condition) +
+                  # Random Smooth for listener
+                  s(time_norm, listener, bs = 'fs', m = 1),
+                discrete = T,
+                AR.start = start_event,
+                rho = .9341941,
+                family = "scat",
+                data = pupil)
+
+summary.gam(wm_pupil)
+
+wm_prediction <- plot_smooth(wm_pupil,
+            view = "list_sort_c",
+            plot_all = "condition",
+            rug = F, se = 1, rm.ranef = T)
+
+```
+
+#### Model Check
+
+Checking model assumptions by plotting residuals and autocorrelation plots. Overall, the plots indicate the model is a good fit to the data.
+
+```{r, warning = F, message = F}
+
+gam.check(wm_pupil)
+
+acf_resid(wm_pupil)
+
+```
+
+#### Model Comparison
+
+```{r, warning = F, message = F}
+
+compareML(m0_pupil, wm_pupil, signif.stars = T, suggest.report = T)
+
+```
+### Working Memory vs Pupil Dilation
+
+Overall, the plot is showing that as working memory increases, so does pupil dilaiton. However, there are some interesting trends in the data.
+
+```{r, message = F, warning = F}
+
+wm_predicted_values <- wm_prediction[[1]][c("condition", "list_sort_c", "fit", "ul", "ll")] |>
+  dplyr::mutate(rep_acc = ifelse(grepl("inaccurate", condition, ignore.case = T), "inaccurate", "accurate"),
+                speaker = ifelse(grepl("Control", condition, ignore.case = T), "Control", "ALS"),
+                speaker = factor(speaker, levels = c("Control", "ALS")))
+
+wm_predicted_values |>
+  ggplot() +
+  aes(x = list_sort_c,
+      y = fit,
+      color = speaker,
+      linetype = rep_acc) +
+  geom_line(size = .8) +
+  theme_bw() +
+  theme(aspect.ratio = 1,
+        legend.position = "bottom") +
+  labs(x = "Working Memory",
+       y = "Pupil Dilation (Arbitrary Units)",
+       color = "Speaker",
+       linetype = "Repetition Accuracy") +
+  scale_color_manual(values = c(my_pal[1], my_pal[2]))
+
+```
+
+## Inhibitory Control
+
+```{r, warning = F, message = F}
+
+inhib_pupil <- bam(normed_pupil ~ condition +
+                  s(time_norm, by = condition, k = 25) +
+                  s(flanker_c, by = condition) +
+                  # Random Smooth for listener
+                  s(time_norm, listener, bs = 'fs', m = 1),
+                discrete = T,
+                AR.start = start_event,
+                rho = .9341941,
+                family = "scat",
+                data = pupil)
+
+summary.gam(inhib_pupil)
+
+inhib_prediction <- plot_smooth(inhib_pupil,
+            view = "flanker_c",
+            plot_all = "condition",
+            rug = F, se = 1, rm.ranef = T)
+
+```
+
+
+#### Model Check
+
+```{r, warning = F, message = F}
+
+
+gam.check(inhib_pupil)
+
+acf_resid(inhib_pupil)
+
+```
+
+
+#### Model Comparison
+
+```{r, warning = F, message = F}
+
+compareML(m0_pupil, inhib_pupil, signif.stars = T, suggest.report = T)
+
+```
+
+### Inhibitory Control vs Pupil Dilation
+
+Overall, there seems to be differing trends between the relationship between inhibitory control and pupil dilation depending on the speaker and phrase repetition accuracy. For the accurately recognized phrases from the control speaker, it appears that as inhibitory control increases, pupil dilation also increases. However, for the other three conditions, it seems there is a slight quadratic relationship, where listeners with lower and higher inhibitory control both have larger pupil dilation, but listeners with inhibitory scores around 70-85 (i.e., 1-2 SD below average standardized score 100), have the lowest pupil dilation.
+
+```{r, warning = F, message = F}
+
+inhib_predicted_values <- inhib_prediction[[1]][c("condition", "flanker_c", "fit", "ul", "ll")] |>
+  dplyr::mutate(rep_acc = ifelse(grepl("inaccurate", condition, ignore.case = T), "inaccurate", "accurate"),
+                speaker = ifelse(grepl("Control", condition, ignore.case = T), "Control", "ALS"),
+                speaker = factor(speaker, levels = c("Control", "ALS")))
+
+inhib_predicted_values |>
+  ggplot() +
+  aes(x = flanker_c,
+      y = fit,
+      color = speaker,
+      linetype = rep_acc) +
+  geom_line(size = .8) +
+  theme_bw() +
+  theme(aspect.ratio = 1,
+        legend.position = "bottom") +
+  labs(x = "Inhibitory Control",
+       y = "Pupil Dilation (Arbitrary Units)",
+       color = "Speaker",
+       linetype = "Repetition Accuracy") +
+  scale_color_manual(values = c(my_pal[1], my_pal[2]))
+```
+
+## Cognitive Flexibility
+
+```{r, warning = F, message = F}
+
+flex_pupil <- bam(normed_pupil ~ condition +
+                  s(time_norm, by = condition, k = 25) +
+                  s(card_sort_c, by = condition) +
+                  # Random Smooth for listener
+                  s(time_norm, listener, bs = 'fs', m = 1),
+                discrete = T,
+                AR.start = start_event,
+                rho = .9341941,
+                family = "scat",
+                data = pupil)
+
+summary.gam(flex_pupil)
+
+flex_prediction <- plot_smooth(flex_pupil,
+            view = "card_sort_c",
+            plot_all = "condition",
+            rug = F, se = 1, rm.ranef = T)
+
+```
+
+
+### Model Check
+
+```{r, warning = F, message = F}
+
+gam.check(flex_pupil)
+
+acf_resid(flex_pupil)
+
+```
+
+
+### Model Comparison
+
+```{r}
+
+compareML(m0_pupil, flex_pupil, signif.stars = T, suggest.report = T)
+
+```
+
+### Cognitive Flexibility vs Pupil Dilation
+
+General trend is that as cognitive flexibility increases, so does pupil dilation. However, there is likely an effect of phrase repetition accuracy. Pupil dilation is higher for inaccurately recognized phrases (for both speakers, but especially the ALS speaker) for listeners with cognitive flexibility scores over 105.
+
+```{r, warning = F, message = F}
+
+flex_predicted_values <- flex_prediction[[1]][c("condition", "card_sort_c", "fit", "ul", "ll")] |>
+  dplyr::mutate(rep_acc = ifelse(grepl("inaccurate", condition, ignore.case = T), "inaccurate", "accurate"),
+                speaker = ifelse(grepl("Control", condition, ignore.case = T), "Control", "ALS"),
+                speaker = factor(speaker, levels = c("Control", "ALS")))
+
+flex_predicted_values |>
+  ggplot() +
+  aes(x = card_sort_c,
+      y = fit,
+      color = speaker,
+      linetype = rep_acc) +
+  geom_line(size = .8) +
+  theme_bw() +
+  theme(aspect.ratio = 1,
+        legend.position = "bottom") +
+  labs(x = "Cognitive Flexibility",
+       y = "Pupil Dilation (Arbitrary Units)",
+       color = "Speaker",
+       linetype = "Repetition Accuracy") +
+  scale_color_manual(values = c(my_pal[1], my_pal[2]))
+```
+
+## Processing Speed
+
+```{r, warning = F, message = F}
+
+process_pupil <- bam(normed_pupil ~ condition +
+                  s(time_norm, by = condition, k = 25) +
+                  s(pattern_c, by = condition) +
+                  # Random Smooth for listener
+                  s(time_norm, listener, bs = 'fs', m = 1),
+                discrete = T,
+                AR.start = start_event,
+                rho = .9341941,
+                family = "scat",
+                data = pupil)
+
+summary.gam(process_pupil)
+
+process_prediction <- plot_smooth(process_pupil,
+            view = "pattern_c",
+            plot_all = "condition",
+            rug = F, se = 1, rm.ranef = T)
+
+```
+
+
+### Model Check
+
+```{r, warning = F, message = F}
+
+gam.check(process_pupil)
+
+acf_resid(process_pupil)
+
+```
+
+
+### Model Comparison
+
+```{r, warning = F, message = F}
+
+compareML(m0_pupil, process_pupil, signif.stars = T, suggest.report = T)
+
+```
+
+
+### Processing Speed vs Pupil Dilation
+
+For Processing speed, there is a curvilinear relationship. Listeners with lower and higher processing speed scores tend to have higher pupil dilation, especially for ALS speaker (both accurately and inaccurately recognized phrases), and accurately recognized control phrases.
+
+```{r, warning = F, message = F}
+
+process_predicted_values <- process_prediction[[1]][c("condition", "pattern_c", "fit", "ul", "ll")] |>
+  dplyr::mutate(rep_acc = ifelse(grepl("inaccurate", condition, ignore.case = T), "inaccurate", "accurate"),
+                speaker = ifelse(grepl("Control", condition, ignore.case = T), "Control", "ALS"),
+                speaker = factor(speaker, levels = c("Control", "ALS")))
+
+process_predicted_values |>
+  ggplot() +
+  aes(x = pattern_c,
+      y = fit,
+      color = speaker,
+      linetype = rep_acc) +
+  geom_line(size = .8) +
+  theme_bw() +
+  theme(aspect.ratio = 1,
+        legend.position = "bottom") +
+  labs(x = "Processing Speed",
+       y = "Pupil Dilation (Arbitrary Units)",
+       color = "Speaker",
+       linetype = "Repetition Accuracy") +
+  scale_color_manual(values = c(my_pal[1], my_pal[2]), labels = c("Neurotypical", "ALS"))
+
+ggsave("Figures/processing_speed_pupil.png", plot = last_plot())
+
+```
+
+
+# Perceived Listening Effort Ratings
+
+## Visualization
+
+```{r, warning = F, message = F}
+
+ple <- ple |>
+  dplyr::left_join(acc, by = c("subject", "trial")) |>
+  dplyr::filter(!is.na(rep_acc)) |>
+  dplyr::left_join(cog, by = "subject") |>
+  dplyr::filter(effort_rating > 0) |>
+  dplyr::filter(effort_rating <= 7) |>
+  dplyr::mutate(trial_c = trial - 6,
+                speaker = factor(speaker, levels = c("Control", "ALS")))
+
+ple |>
+  dplyr::group_by(speaker, rep_acc) |>
+  dplyr::summarize(per_effort = mean(effort_rating, na.rm = T), 
+                   sd = sd(effort_rating, na.rm = T),
+                   se = sd/sqrt(n())) |>
+  ggplot() +
+   aes(x = rep_acc,
+       y = per_effort,
+       group = speaker,
+       color = speaker,
+       fill = speaker) +
+  geom_bar(stat = "identity", alpha = 0.6, position = position_dodge()) +
+  geom_errorbar(aes(ymin = per_effort - se, ymax = per_effort + se), width = 0.4, position = position_dodge(.9)) +
+  labs(x = "Accuracy", y = "Perceived Listening Effort Rating", color = "Speaker", fill = "Speaker") +
+  theme_bw() +
+  theme(aspect.ratio = 1) +
+  scale_color_manual(values = c(my_pal[1], my_pal[2]), labels =  c("Neurotypical", "ALS")) +
+  scale_fill_manual(values = c(my_pal[1], my_pal[2]), labels = c("Neurotypical", "ALS"))
+
+ggsave("Figures/ple_plot.png", plot = last_plot())
+
+```
+
+
+
+```{r, warning = F, message = F}
+
+ple |>
+  dplyr::select(subject, trial, speaker, code, effort_rating, rep_acc, ends_with("_c")) |>
+  dplyr::group_by(subject, speaker, rep_acc, list_sort_c, flanker_c, card_sort_c, pattern_c) |>
+  dplyr::summarize(effort = mean(effort_rating)) |>
+  dplyr::rename('Working Memory' = list_sort_c,
+                'Inhibitory Control' = flanker_c,
+                'Cognitive Flexibility' = card_sort_c,
+                'Processing Speed' = pattern_c) |>
+  tidyr::pivot_longer(cols = "Working Memory":"Processing Speed",
+                     names_to = "cog_measure",
+                     values_to = "score") |>
+  ungroup() |>
+  ggplot() +
+  aes(x = score,
+      y = effort,
+      color = speaker,
+      shape = speaker) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "lm") +
+  facet_grid(cog_measure ~ rep_acc) +
+  labs(x = "Score", y = "Perceived Listening Effort Rating") +
+  theme_classic() +
+  scale_color_manual(values = my_pal) +
+  scale_shape_manual(values = c(1, 2)) +
+  theme(aspect.ratio = 1)
+
+ggsave("Figures/ple_plot_cog.png", plot = last_plot())
+
+```
+
+## Models
+
+### Fully Unconditional Model
+
+```{r, warning = F, message = F}
+
+
+m0 <- glmmTMB(effort_rating ~ 1 + (1|subject) + (1|code), data = ple)
+sjPlot::tab_model(m0, pred.labels = "Intercept",
+                  dv.labels = "Perceived Listening Effort")
+
+performance::icc(m0)
+
+```
+
+### Model 1
+
+In this step, we are adding trial order (trial_c) as a random slop for both the listener (subject) and phrase (code) random intercepts. The random intercept of trial order significantly improved model fit.
+
+```{r, warning = F, message = F}
+
+m1<- glmmTMB(effort_rating ~ 1 + (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m1, pred.labels = "Intercept",
+                  dv.labels = "Perceived Listening Effort")
+performance::test_performance(m0, m1)
+
+```
+
+### Model 2
+
+Trial order is the first random effect added to the model. Trial order is added in order to control for any possible order effects in the data. As noted in the results below, adding trial order did not significantly improve model fit to the data. However, I'll leave this fixed effect in the model to act as a covariate.
+
+```{r, warning = F, message = F}
+
+m2 <- glmmTMB(effort_rating ~ trial_c + (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m2, 
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m1, m2)
+
+```
+
+### Model 3
+
+Adding the main fixed effect of speaker significantly improved the model fit.
+
+```{r, warning = F, message = F}
+
+m3 <- glmmTMB(effort_rating ~ trial_c + speaker + (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m3,
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m2, m3)
+
+```
+
+### Model 4
+
+The main fixed effect of repetition accuracy significantly improved model fit.
+
+```{r, warning = F, message = F}
+
+m4 <- glmmTMB(effort_rating ~ trial_c + speaker + rep_acc + (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m4,
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m3, m4)
+
+
+```
+### Model 5
+
+The interaction term between speaker and repetition accuracy did not significantly improve model fit. This indicates that the magnitude between accurate and inaccurate ratings was similar for both speakers.
+
+```{r, warning = F, message = F}
+
+m5 <- glmmTMB(effort_rating ~ trial_c + speaker + rep_acc + speaker*rep_acc + (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m5,
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m4, m5)
+
+
+```
+### Model 6
+
+```{r}
+
+m6 <- glmmTMB(effort_rating ~ trial_c + speaker + rep_acc + scale(list_sort_c, scale = F) + (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m6,
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m4, m6)
+
+```
+### Model 7
+
+```{r}
+
+m7 <- glmmTMB(effort_rating ~ trial_c + speaker + rep_acc + scale(flanker_c, scale = F) + (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m7,
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m4, m7)
+
+```
+### Model 8
+
+```{r}
+
+m8 <- glmmTMB(effort_rating ~ trial_c + speaker + rep_acc + scale(card_sort_c, scale = F) + (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m8,
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m4, m8)
+
+```
+
+### Model 9
+
+```{r}
+
+m9 <- glmmTMB(effort_rating ~ trial_c + speaker + rep_acc + scale(pattern_c, scale = F) + (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m9,
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m4, m9)
+
+
+```
+### Model 10
+
+```{r}
+
+m10 <- glmmTMB(effort_rating ~ trial_c + speaker + rep_acc + speaker*scale(list_sort_c, scale = F) + (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m10,
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m4, m10)
+
+```
+
+### Model 11
+
+```{r}
+
+m11 <- glmmTMB(effort_rating ~ trial_c + speaker + rep_acc + speaker*scale(flanker_c, scale = F) + (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m11,
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m4, m11)
+
+```
+
+### Model 12
+
+```{r}
+
+m12 <- glmmTMB(effort_rating ~ trial_c + speaker + rep_acc + speaker*scale(card_sort_c, scale = F) + (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m12,
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m4, m12)
+
+```
+### Model 13
+
+```{r}
+
+m13 <- glmmTMB(effort_rating ~ trial_c + speaker + rep_acc + 
+                 speaker*scale(card_sort_c, scale = F) +  speaker*scale(pattern_c, scale = F) +(trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m13,
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m12, m13)
+
+```
+
+### Model 14
+
+```{r}
+
+m14 <- glmmTMB(effort_rating ~ trial_c + speaker + rep_acc + 
+                 speaker*scale(card_sort_c, scale = F) +  speaker*scale(list_sort_c, scale = F) + (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m14,
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m12, m14)
+
+```
+
+### Model 15
+
+```{r}
+
+m15 <- glmmTMB(effort_rating ~ trial_c + speaker + rep_acc + 
+                 speaker*scale(card_sort_c, scale = F) +  speaker*scale(list_sort_c, scale = F) + 
+                 rep_acc*scale(list_sort_c, scale = F) +
+                 (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m15,
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m14, m15)
+
+```
+### Model 16
+
+```{r}
+
+m16 <- glmmTMB(effort_rating ~ trial_c + speaker + rep_acc + 
+                 speaker*scale(card_sort_c, scale = F) + speaker*scale(list_sort_c, scale = F) + 
+                 rep_acc*scale(list_sort_c, scale = F) + rep_acc*scale(flanker_c, scale = F) +
+                 (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m16,
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m15, m16)
+
+```
+### Model 17
+
+```{r}
+
+m17 <- glmmTMB(effort_rating ~ trial_c + speaker + rep_acc + 
+                 speaker*scale(card_sort_c, scale = F) + speaker*scale(list_sort_c, scale = F) + 
+                 rep_acc*scale(list_sort_c, scale = F) + rep_acc*scale(card_sort_c, scale = F) +
+                 (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m17,
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m15, m17)
+
+```
+
+### Model 18
+
+```{r}
+
+m18 <- glmmTMB(effort_rating ~ trial_c + speaker + rep_acc + 
+                 speaker*scale(card_sort_c, scale = F) + speaker*scale(list_sort_c, scale = F) + 
+                 rep_acc*scale(list_sort_c, scale = F) + rep_acc*scale(card_sort_c, scale = F) + rep_acc*scale(pattern_c, scale = F) +
+                 (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m18,
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m17, m18)
+
+```
+
+### Model 19
+
+```{r}
+
+m19 <- glmmTMB(effort_rating ~ trial_c + speaker + rep_acc + 
+                 speaker*scale(card_sort_c, scale = F) + speaker*scale(list_sort_c, scale = F) + 
+                 rep_acc*scale(list_sort_c, scale = F) + rep_acc*scale(card_sort_c, scale = F) + 
+                 speaker*rep_acc*scale(list_sort_c, scale = F) +
+                 (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m19,
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m17, m19)
+
+```
+### Model 20
+
+```{r}
+
+m20 <- glmmTMB(effort_rating ~ trial_c + speaker + rep_acc + 
+                 speaker*scale(card_sort_c, scale = F) + speaker*scale(list_sort_c, scale = F) + 
+                 rep_acc*scale(list_sort_c, scale = F) + rep_acc*scale(card_sort_c, scale = F) + 
+                 speaker*rep_acc*scale(flanker_c, scale = F) +
+                 (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m20,
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m17, m20)
+
+```
+### Model 21
+
+```{r}
+
+m21 <- glmmTMB(effort_rating ~ trial_c + speaker + rep_acc + 
+                 speaker*scale(card_sort_c, scale = F) + speaker*scale(list_sort_c, scale = F) + 
+                 rep_acc*scale(list_sort_c, scale = F) + rep_acc*scale(card_sort_c, scale = F) + 
+                 speaker*rep_acc*scale(card_sort_c, scale = F) +
+                 (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m21,
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m17, m21)
+
+```
+### Model 22
+
+```{r}
+
+m22 <- glmmTMB(effort_rating ~ trial_c + speaker + rep_acc + 
+                 speaker*scale(card_sort_c, scale = F) + speaker*scale(list_sort_c, scale = F) + 
+                 rep_acc*scale(list_sort_c, scale = F) + rep_acc*scale(card_sort_c, scale = F) + 
+                 speaker*rep_acc*scale(pattern_c, scale = F) +
+                 (trial_c|subject) + (trial_c|code), data = ple)
+sjPlot::tab_model(m22,
+                  dv.labels = "Perceived Listening Effort")
+
+performance::test_performance(m17, m22)
+
+```
+## Final Model
+
+The final best-fitting LME model for the PLE data is below. In general, both the interaction between working memory and cognitive flexibility with speaker was significant, indicating that listeners with higher working memory scores generally rated accurately-recognized ALS speaker as more effortful. However, listener with higher cognitive flexibility scores tend to rate accurately-recognized ALS speaker as less effortful.The three-way interaction for both of these cognitive measures with speaker and repetition accuracy was not significant.
+
+These cognitive measures also had a significant interaction with repetition accuracy. Listeners with higher working memory scores tend to rate inaccurately recognized phrases from the control speaker as less effortful. Additionally, listeners with higher cognitive flexibility scores tend to rate inaccurately-recognized phrases for the control speaker as more effortful. As mentioned before, the three way interactions were not significant indicating that the pattern of results for inaccurately recognized ALS phrases was similar. 
+
+```{r}
+
+sjPlot::tab_model(m17,
+                  dv.labels = "Perceived Listening Effort")
+
+```
+
+
+
