@@ -557,7 +557,7 @@ ple |>
         panel.spacing.x = unit(.8, "lines"),
         legend.position = "bottom")
 
-ggsave("Figures/ple_plot.png", plot = last_plot(), width = 3, height = 6, units = "in", scale = 1.2)
+ggsave("Figures/ple_plot_cog.png", plot = last_plot(), width = 3, height = 6, units = "in", scale = 1.2)
 
 ```
 

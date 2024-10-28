@@ -651,12 +651,14 @@ ple |>
       shape = speaker) +
   geom_point(alpha = 0.6) +
   geom_smooth(method = "lm") +
-  facet_grid(rep_acc ~ cog_measure) +
+  facet_grid(cog_measure ~ rep_acc) +
   labs(x = "Score", y = "Perceived Listening Effort Rating") +
   theme_classic() +
   scale_color_manual(values = my_pal) +
   scale_shape_manual(values = c(1, 2)) +
   theme(aspect.ratio = 1)
+
+ggsave("Figures/ple_plot_cog.png", plot = last_plot())
 
 ```
 
